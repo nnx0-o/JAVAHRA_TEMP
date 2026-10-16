@@ -1,8 +1,8 @@
-class Array<E> {
+class ItemCollection<E> {
     private E[] items;
     private int itemCount;
 
-    public Array(int size) {
+    public ItemCollection(int size) {
         this.items = (E[])(new Object[size]);
         this.itemCount = 0;
     }
@@ -31,11 +31,11 @@ class Array<E> {
 
     @Override
     public String toString() {
-        String tisk = "Polozky\n";
+        String output = "Polozky\n";
         for (int i=0; i<this.itemCount; i++) {
-            tisk += this.items[i] + "\n";
+            output += this.items[i] + "\n";
         }
-        return tisk;
+        return output;
     }
 
 }

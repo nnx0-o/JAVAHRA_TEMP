@@ -2,13 +2,13 @@ public class Player {
     private final String name;
     private int health;
     private int gold;
-    private final Array<Item> inventory;
+    private final ItemCollection<Item> inventory;
     
     public Player(String name) {
         this.name = name;
         this.health = 4;
         this.gold = 10;
-        this.inventory = new Array<>(5);
+        this.inventory = new ItemCollection<>(5);
     }
 
     public boolean addToInventory(ItemType itemType, String itemName) {
