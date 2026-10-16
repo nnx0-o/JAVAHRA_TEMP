@@ -1,4 +1,4 @@
-class ItemCollection<E> {
+public class ItemCollection<E> {
     private E[] items;
     private int itemCount;
 

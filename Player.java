@@ -36,6 +36,22 @@ public class Player {
         return (int)(Math.random()*6 + 1);
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public int getGold() {
+        return gold;
+    }
+
+    public ItemCollection<Item> getInventory() {
+        return inventory;
+    }
+
     @Override
     public String toString() {
         return "Hrac [name=" + name + ", zivoty=" + health + ", zlataky=" + gold + ", inventar=" + inventory + "]";
