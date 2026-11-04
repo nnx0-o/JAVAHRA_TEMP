@@ -1,0 +1,8 @@
+/bin/
+/out/
+/build/
+*.class
+/src/oracleJdk-*/
+/.agents/
+/.aws/
+/.codex/

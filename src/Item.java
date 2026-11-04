@@ -1,11 +1,19 @@
 public class Item {
 
-    private ItemType itemType;
-    private String name;
+    private final ItemType itemType;
+    private final String name;
     
     public Item(ItemType itemType, String name) {
         this.itemType = itemType;
         this.name = name;
+    }
+
+    public ItemType getItemType() {
+        return itemType;
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override

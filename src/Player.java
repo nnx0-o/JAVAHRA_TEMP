@@ -1,4 +1,5 @@
 public class Player {
+    public static final int MAX_HEALTH = 4;
     private final String name;
     private int health;
     private int gold;
@@ -6,15 +7,16 @@ public class Player {
     
     public Player(String name) {
         this.name = name;
-        this.health = 4;
+        this.health = MAX_HEALTH;
         this.gold = 10;
         this.inventory = new ItemCollection<>(5);
     }
 
     public boolean addToInventory(ItemType itemType, String itemName) {
-        if (this.gold < 3) return false;
+        if (this.gold < 3 || inventory.isFull()) return false;
+        if (!inventory.addItem(new Item(itemType, itemName))) return false;
         this.gold -= 3;
-        return inventory.addItem(new Item(itemType, itemName));
+        return true;
     }
 
     public void challengeToDuel(Player opponent) {
@@ -44,12 +46,33 @@ public class Player {
         return health;
     }
 
+    // Hráč spravuje zdraví; pravidla jednotlivých tahů určuje Main.
+    public void takeDamage(int damage) {
+        health = Math.max(0, health - Math.max(0, damage));
+    }
+
+    public void heal(int amount) {
+        health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
+    }
+
+    public boolean isAlive() { return health > 0; }
+
     public int getGold() {
         return gold;
     }
 
     public ItemCollection<Item> getInventory() {
         return inventory;
+    }
+
+    public void receiveGold(int amount) {
+        if (amount > 0) gold += amount;
+    }
+
+    public boolean spendGold(int amount) {
+        if (amount < 0 || gold < amount) return false;
+        gold -= amount;
+        return true;
     }
 
     @Override

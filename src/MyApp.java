@@ -4,13 +4,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class MyApp {
-    static int gold = 100;
-    static int goldPerSec = 1;
-    static List<String> submittedPasses = new ArrayList<>();
-    static List<String> inventory = new ArrayList<>(List.of("Starter Boots"));
-
     public static void main(String[] args) {
         MiniTui tui = new MiniTui();
+        Shop shop = new Shop();
+        List<String> submittedPasses = new ArrayList<>();
 
         // ====================================================================
         // LAYER 0: REAL-TIME MULTI-PASS DASHBOARD (Z = 0)
@@ -31,7 +28,7 @@ public class MyApp {
             String entry = commandInput.getValue().trim();
             if (!entry.isEmpty()) {
                 submittedPasses.add(entry);
-                gold += 10; // Bonus gold for every pass submitted
+                shop.rewardForSubmittedPass();
                 commandInput.setValue("");
                 previewLabel.setText("Preview: (empty)");
                 tui.setStatus("Pass #" + submittedPasses.size() + " saved (+10g bonus)!");
@@ -76,9 +73,7 @@ public class MyApp {
 
         // Shop Buy Buttons inside the left box
         tui.add(new MiniTui.Button(4, 6, 1, "Buy Health Potion (25g)", () -> {
-            if (gold >= 25) {
-                gold -= 25;
-                inventory.add("Health Potion");
+            if (shop.buyHealthPotion()) {
                 tui.setStatus("Bought Health Potion!");
             } else {
                 tui.setStatus("Need 25g for Health Potion!");
@@ -86,9 +81,7 @@ public class MyApp {
         }));
 
         tui.add(new MiniTui.Button(4, 8, 1, "Buy Knight Sword (80g)", () -> {
-            if (gold >= 80) {
-                gold -= 80;
-                inventory.add("Knight Sword");
+            if (shop.buyKnightSword()) {
                 tui.setStatus("Bought Knight Sword!");
             } else {
                 tui.setStatus("Need 80g for Knight Sword!");
@@ -96,10 +89,8 @@ public class MyApp {
         }));
 
         tui.add(new MiniTui.Button(4, 10, 1, "Hire Miner (+5g/s) (120g)", () -> {
-            if (gold >= 120) {
-                gold -= 120;
-                goldPerSec += 5;
-                tui.setStatus("Hired Miner! Income is now +" + goldPerSec + "g/s!");
+            if (shop.hireMiner()) {
+                tui.setStatus("Hired Miner! Income is now +" + shop.getGoldPerSecond() + "g/s!");
             } else {
                 tui.setStatus("Need 120g to hire a Miner!");
             }
@@ -108,8 +99,7 @@ public class MyApp {
         // Promo code input inside the shop (x=4 to x=30) + Redeem button at x=32
         MiniTui.Input promoInput = tui.add(new MiniTui.Input(4, 12, 1, "Coupon", "", 10));
         tui.add(new MiniTui.Button(29, 12, 1, "Redeem", () -> {
-            if (promoInput.getValue().trim().equalsIgnoreCase("RICH")) {
-                gold += 300;
+            if (shop.redeemCoupon(promoInput.getValue())) {
                 promoInput.setValue("");
                 tui.setStatus("Redeemed code 'RICH' for +300g!");
             } else {
@@ -133,28 +123,29 @@ public class MyApp {
         tui.onTick(() -> {
             ticks[0]++;
             if (ticks[0] % 20 == 0) {
-                gold += goldPerSec;
+                shop.collectIncome();
             }
 
             // Update Layer 0 (Dashboard)
             clockLabel.setText("Clock: " + LocalTime.now().format(fmt));
-            mainGoldLbl.setText("Gold: " + gold + "g (+" + goldPerSec + "/s)");
+            mainGoldLbl.setText("Gold: " + shop.getGold() + "g (+" + shop.getGoldPerSecond() + "/s)");
 
             int pSize = submittedPasses.size();
             if (pSize >= 1) log1.setText("Latest: " + submittedPasses.get(pSize - 1));
             if (pSize >= 2) log2.setText("Prev 1: " + submittedPasses.get(pSize - 2));
             if (pSize >= 3) log3.setText("Prev 2: " + submittedPasses.get(pSize - 3));
 
+            List<String> inventory = shop.getInventory();
             int iSize = inventory.size();
             if (iSize >= 1) gear1.setText("* " + inventory.get(iSize - 1));
             if (iSize >= 2) gear2.setText("* " + inventory.get(iSize - 2));
             if (iSize >= 3) gear3.setText("* " + inventory.get(iSize - 3));
 
             // Update Layer 1 (Shop)
-            shopGoldLbl.setText("Gold: " + gold + "g");
-            shopRateLbl.setText("Income: +" + goldPerSec + "g/sec");
+            shopGoldLbl.setText("Gold: " + shop.getGold() + "g");
+            shopRateLbl.setText("Income: +" + shop.getGoldPerSecond() + "g/sec");
             shopBagLbl.setText("Items Owned: " + iSize);
-            shopLastLbl.setText("Latest: " + inventory.get(iSize - 1));
+            shopLastLbl.setText("Latest: " + shop.getLatestItem());
 
             // Responsive width for the right-side Shop box
             walletBox.width = Math.max(24, tui.getTerminalWidth() - 50);
@@ -163,6 +154,6 @@ public class MyApp {
         tui.start();
 
         System.out.println("Exited TUI! Submitted passes: " + submittedPasses);
-        System.out.println("Final Inventory: " + inventory);
+        System.out.println("Final Inventory: " + shop.getInventory());
     }
 }
