@@ -22,7 +22,7 @@ public class ItemCollection<E> {
     public E removeItem(int index) {
         if (!containsIndex(index)) return null;
         E removedItem = this.items[index];
-        for (int i=index; i<this.itemCount-1; i++) {
+        for (int i=index; i<this.itemCount-1; i++) {	// zaplni mezeru po odebranem predmetu
             this.items[i] = this.items[i+1];
         }
         this.items[--this.itemCount] = null;

@@ -2,8 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/** Celý průběh lokální hry 1v1; vstup i výstup zajišťuje MiniTui. */
-public class Main {
+public class Main {		// propojeni objektu a rizeni cele hry
     private final MiniTui tui = new MiniTui();
     private final Shop shop = new Shop();
     private final Random random = new Random();
@@ -35,10 +34,15 @@ public class Main {
             tui.setLayer(0);
         }));
 
-        add(shopping, new MiniTui.Button(3, 8, 0, "Lektvar (3g)", () -> buy(ItemType.POTION)));
-        add(shopping, new MiniTui.Button(3, 10, 0, "Meč (5g)", () -> buy(ItemType.SWORD)));
-        add(shopping, new MiniTui.Button(3, 12, 0, "Štít (4g)", () -> buy(ItemType.SHIELD)));
-        add(shopping, new MiniTui.Button(3, 14, 0, "Připraven", this::ready));
+        int shopRow = 8;
+        for (var offer : shop.getStock().entrySet()) {	// tlacitka vychazi z nabidky obchodu
+            Item item = offer.getKey();
+            int price = offer.getValue();
+            add(shopping, new MiniTui.Button(3, shopRow, 0,
+                    item.getName() + " (" + price + "g)", () -> buy(item, price)));
+            shopRow += 2;
+        }
+        add(shopping, new MiniTui.Button(3, shopRow, 0, "Připraven", this::ready));
         add(combat, new MiniTui.Button(3, 8, 0, "Útok", this::attack));
         add(combat, new MiniTui.Button(3, 10, 0, "Obrana", () -> {
             if (!canAct()) return;
@@ -49,8 +53,7 @@ public class Main {
         tui.add(new MiniTui.Button(3, 17, 0, "Konec", tui::stop));
         show(shopping, false);
         show(combat, false);
-        // Stejná obrazovka se aktualizuje v reálném čase; žádné Scanner prompty.
-        tui.onTick(this::refresh);
+        tui.onTick(this::refresh);		// obnovuje udaje na obrazovce
         tui.setStatus("Šipky: výběr | Enter: potvrdit / upravit | Ctrl+C: konec");
     }
 
@@ -68,9 +71,9 @@ public class Main {
         return value.isEmpty() ? fallback : value;
     }
 
-    private void buy(ItemType type) {
+    private void buy(Item item, int price) {
         if (fighting || players[turn] == null) return;
-        message.setText(shop.buy(players[turn], type) ? "Koupeno: " + type
+        message.setText(players[turn].buy(item, price) ? "Koupeno: " + item.getName()
                 : "Nedostatek zlata nebo plný inventář.");
     }
 
@@ -103,8 +106,7 @@ public class Main {
         Player actor = players[turn];
         Player opponent = players[1 - turn];
         int damage = 1 + random.nextInt(2);
-        // Více stejných zbraní či štítů bonus nesčítá.
-        if (findItem(actor, ItemType.SWORD) >= 0) damage++;
+        if (findItem(actor, ItemType.SWORD) >= 0) damage++;	// bonus se za dalsi mece nescita
         if (findItem(opponent, ItemType.SHIELD) >= 0) damage--;
         if (defending[1 - turn]) damage--;
         damage = Math.max(0, damage);
@@ -135,8 +137,7 @@ public class Main {
             return;
         }
         turn = 1 - turn;
-        // Obrana končí na začátku dalšího vlastního tahu.
-        defending[turn] = false;
+        defending[turn] = false;		// obrana konci na zacatku vlastniho tahu
         message.setText(result);
     }
 

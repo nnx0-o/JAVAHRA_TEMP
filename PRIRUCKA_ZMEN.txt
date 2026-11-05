@@ -1,0 +1,292 @@
+PŘÍRUČKA ZMĚN V PROJEKTU DUEL
+Stav k 5. listopadu 2026
+
+Tento přehled porovnává původní soubory ve složce
+origin/OneDrive_1_11-5-2026/ se současnými soubory v src/.
+Popisuje již hotové změny, jejich důvody a zamýšlené další kroky.
+Původní podklady zůstávají zachované pro srovnání.
+
+1. CO SE ZMĚNILO JAKO CELEK
+
+Původní program vytvořil dva hráče s pevnými jmény, přidal jim několik
+předmětů a provedl dva předem zapsané souboje. Uživatel nevybíral akce.
+Při souboji oba hráči hodili kostkou: vyšší hod přidal vítězi jednu
+zlatku a soupeři odebral jeden život. Remíza nic nezměnila.
+
+Současný program umožňuje odehrát celý místní zápas dvou hráčů.
+Hráči zadají jména, postupně nakoupí a střídají se v útoku, obraně
+nebo použití lektvaru. Hra rozpozná porážku a vyhlásí vítěze.
+Předměty mají skutečný účinek na průběh boje.
+
+Vedle rozšíření hry se sjednotilo rozdělení odpovědností:
+
+  Main           řídí průběh hry a spolupráci ostatních objektů
+  Player         uchovává stav hráče a poskytuje metody pro jeho změnu
+  Shop           obsahuje nabídku předmětů a ceny
+  Item           představuje konkrétně pojmenovaný předmět určitého typu
+  ItemType       vyjmenovává dostupné druhy předmětů
+  ItemCollection spravuje ukládání a odebírání předmětů
+
+Jde stále o objektový návrh. Hráč však sám neřídí celý souboj ani
+neurčuje nabídku obchodu. Main rozhodne, co se ve hře stane, a zavolá
+odpovídající metody objektů. Vnitřní proměnné hráče zůstávají soukromé.
+
+2. KDE HLEDAT ODPOVÍDAJÍCÍ SOUBORY
+
+  Původně                  Nyní
+  Main.java                src/Main.java
+  Hrac.java                src/Player.java
+  Predmet.java             src/Item.java
+  DruhPredmetu.java         src/ItemType.java
+  Pole.java                src/ItemCollection.java
+
+Nově přibyly samostatný obchod v src/Shop.java, terminálové rozhraní
+v src/MiniTui.java a kontrola nákupů v tests/PlayerPurchaseTest.java.
+Soubor README.md obsahuje stručné pokyny ke spuštění a pravidla hry.
+
+Názvy tříd, metod a většiny proměnných byly převedeny do angličtiny.
+Nejde tedy o dvě různé sady herních objektů: například Player navazuje
+na původní Hrac a ItemCollection na původní Pole.
+
+3. HRAC.JAVA → PLAYER.JAVA: STAV HRÁČE A BEZPEČNÉ ZMĚNY
+
+Výchozí hodnoty zůstaly stejné: 4 životy, 10 zlatých a inventář
+na 5 předmětů. Přibyly metody pro čtení jména, zdraví, zlata a inventáře.
+Jméno a odkaz na inventář se po vytvoření hráče nemění.
+
+Nejdůležitější změna je oddělení přidání předmětu od nákupu.
+
+Původní pridejInventar(druh, nazev) vždy odečetla 3 zlaté. Teprve poté
+zkusila předmět uložit. Při plném inventáři tak hráč mohl přijít o zlato,
+i když předmět nedostal. Navíc stejnou metodou nešlo předat předmět
+zdarma, například jako odměnu.
+
+Nyní existují dvě samostatné operace:
+
+  addToInventory(item)
+  Přidá již vytvořený předmět. Zlato vůbec nemění. Vrátí true při
+  úspěchu a false při plném inventáři nebo předání hodnoty null.
+
+  buy(item, price)
+  Ověří nezápornou cenu a dostatek zlata, pokusí se přidat předmět
+  a až po úspěšném přidání odečte cenu. Vrátí true při úspěchu.
+  Pokud nákup není možný, vrátí false a nic nezmění.
+
+Příklad: player.addToInventory(new Item(ItemType.SWORD, "Meč"))
+přidá meč zdarma. player.buy(new Item(ItemType.SWORD, "Meč"), 5)
+přidá meč za 5 zlatých, pokud na něj hráč má a může jej uložit.
+
+V mezilehlé verzi existovala také metoda obchod(number), která odečítala
+zlato, ale vytvořený předmět do inventáře vůbec nevložila. Ta byla
+odstraněna. Nebyla součástí původních podkladů ve složce origin/.
+
+Původní vyzvatNaSouboj(), později challengeToDuel(), a pomocný hod
+kostkou byly z hráče odstraněny. Výpočet útoku a řízení tahů jsou v Main.
+
+Přibyly malé metody pro změny stavu:
+
+  takeDamage(damage)  odečte poškození, zdraví neklesne pod nulu
+  heal(amount)        přidá zdraví nejvýše do MAX_HEALTH, tedy 4
+  isAlive()           zjistí, zda hráči zbývá alespoň jeden život
+  receiveGold(amount) přidá kladnou částku
+  spendGold(amount)   odečte nezápornou částku, pokud na ni hráč má
+
+Záporné poškození ani záporné léčení nemění zdraví. O tom, kolik škody
+způsobí útok nebo kolik obnoví lektvar, rozhoduje Main.
+
+4. NOVÝ SHOP.JAVA: JEDNO MÍSTO PRO NABÍDKU A CENY
+
+V původní verzi nebyl samostatný obchod a každý předmět přidaný přes
+hráče stál 3 zlaté. Nyní Shop uchovává dvojice předmět–cena:
+
+  Lektvar  3 zlaté
+  Meč      5 zlatých
+  Štít     4 zlaté
+
+Nabídka je uložená v LinkedHashMap, takže při procházení zachovává
+pořadí vložení. getStock() ji zpřístupňuje pouze pro čtení.
+Main z této nabídky vytváří tlačítka včetně názvů a cen. Cena se tedy
+nemusí znovu ručně zapisovat do textu tlačítka.
+
+Obchod neuchovává hráčovo zlato ani jeho inventář. Nabídka také nemá
+omezený počet kusů: nákup z ní předmět neodebírá. Item je neměnný,
+proto může stejný objekt z nabídky bezpečně představovat více položek
+v inventářích. Pokud by předměty později získaly vlastní opotřebení,
+bylo by nutné vytvářet samostatné kusy.
+
+Z obchodu byla odstraněna ekonomika starší demonstrační aplikace:
+vlastní peněženka, pasivní příjem, horník, kupon a textový seznam věcí.
+Aplikace MyApp byla také odstraněna. Aktivní hra nyní používá jedinou
+cestu nákupu: Main vybere nabídku a zavolá Player.buy(item, price).
+
+5. MAIN.JAVA: OD PEVNÉ UKÁZKY K CELÉMU ZÁPASU
+
+Původní Main pouze prováděl předem napsanou posloupnost příkazů.
+Současný Main uchovává oba hráče, informaci o tahu, přípravě, konci
+zápasu a dočasné obraně. Zároveň propojuje herní akce s rozhraním.
+
+Pro orientaci v metodách:
+
+  Konstruktor     připraví obrazovku, zadání jmen a tlačítka akcí
+  name()          ořízne mezery; při prázdném jménu použije výchozí jméno
+  buy()           předá předmět a cenu hráči a zobrazí výsledek nákupu
+  ready()         předá obchod druhému hráči, následně zahájí souboj
+  canAct()        povolí bojovou akci jen během neukončeného souboje
+  findItem()      vyhledá první předmět požadovaného typu v inventáři
+  attack()        vypočítá poškození a předá je soupeři
+  heal()          ověří a spotřebuje lektvar a obnoví zdraví
+  endTurn()       vyhodnotí vítězství, nebo předá tah druhému hráči
+  refresh()       aktualizuje údaje zobrazené na obrazovce
+  add(), show()   pomáhají seskupovat a zobrazovat ovládací prvky
+
+Samotná metoda main() vytvoří Main a spustí rozhraní. Herní průběh
+pokračuje prostřednictvím metod volaných po stisku tlačítek.
+Opakované čtení kláves a vykreslování obstarává MiniTui.
+
+Změnila se i pravidla oproti původním hodům kostkou:
+
+- Útok způsobí náhodně 1 nebo 2 body poškození.
+- Meč útočníka přidá 1 bod a štít obránce odečte 1 bod.
+- Akce obrany odečte další 1 bod. Platí do začátku dalšího vlastního tahu.
+- Poškození neklesne pod nulu. Více mečů nebo štítů bonus nezvyšuje.
+- Lektvar obnoví až 2 životy, nejvýše do maxima 4, a zmizí z inventáře.
+- Bez lektvaru nebo při plném zdraví se léčení neprovede a tah pokračuje.
+- Po platné akci se hráči vystřídají. Při porážce soupeře zápas skončí.
+- Vítěz získá 1 zlatý za celý zápas; původně šlo o odměnu za každý
+  vyhraný hod. Odměnu nyní nelze využít v dalším kole, protože odveta
+  ještě není implementovaná.
+
+Tyto herní mechanismy existovaly již před posledním sjednocením tříd.
+Poslední úprava odstranila zbytky staré logiky a zjednodušila nákup;
+pravidla útoku při ní nebyla znovu měněna.
+
+6. PREDMET.JAVA → ITEM.JAVA
+
+Zůstala dvojice údajů: typ předmětu a jeho jméno. Nyní jsou obě pole
+final, takže se po vytvoření nemění. Přibyly getItemType() a getName().
+Main může podle typu určit účinek a podle jména zobrazit nabídku.
+
+Předmět sám neodečítá zlato, neléčí ani neútočí. Cena patří do Shop
+a použití předmětu řídí Main. Metoda toString() nadále slouží hlavně
+k jednoduchému výpisu; její původní české názvy údajů ještě nejsou
+sjednocené s anglickými názvy v kódu.
+
+7. DRUHPREDMETU.JAVA → ITEMTYPE.JAVA
+
+Původní hodnoty byly přejmenovány:
+
+  MEC → SWORD, LEKTVAR → POTION, STIT → SHIELD,
+  BRNENI → ARMOR, LUK → BOW.
+
+Počet typů se nezměnil. Aktivní obchod a boj používají meč, lektvar
+a štít. Brnění a luk jsou zatím pouze hodnoty výčtu, bez nabídky
+a bez vlastního účinku. Jejich existence sama o sobě nepřidává mechaniku.
+
+8. POLE.JAVA → ITEMCOLLECTION.JAVA
+
+Zůstala vlastní obecná kolekce založená na poli s pevnou kapacitou.
+Nebyla nahrazena ArrayListem. Odpovídající metody se přejmenovaly:
+
+  pridejPolozku() → addItem()
+  vratPolozku()   → getItem()
+  odeberPolozku() → removeItem()
+
+Přibylo odmítání hodnoty null a kontrola záporných indexů. Dříve mohl
+záporný index skončit výjimkou při přístupu do pole. Nyní getItem()
+a removeItem() při neplatném indexu vracejí null.
+
+Nové size() a isFull() zpřístupňují počet položek a zaplnění inventáře.
+Po odebrání se následující položky stále posouvají doleva a poslední
+obsazené místo se uvolní. Kolekce sama nikdy nemění zlato hráče.
+
+V konstruktoru zůstává přetypování Object[] na E[]. Překladač kvůli němu
+vypisuje upozornění na nekontrolované přetypování; nejde o novou změnu.
+
+9. DALŠÍ SOUBORY A OVĚŘENÍ
+
+src/Hra.java
+Starší pomocná ukázka, která vytvoří dva hráče a vypíše jejich stav.
+Není vstupním bodem současného zápasu. Neplatné zakomentované ukázky
+starého nákupu a souboje byly při úpravě komentářů odstraněny.
+
+src/MiniTui.java
+Nové terminálové rozhraní oproti původnímu prostému výpisu. Poskytuje
+texty, vstupy, tlačítka a obsluhu klávesnice. Jeho vnitřní fungování
+vysvětlí autor samostatně; tato příručka je nerozebírá. Soubor obsahuje
+podrobné anglické komentáře určené pro tento výklad.
+
+tests/PlayerPurchaseTest.java
+Nový samostatně spustitelný test bez další knihovny. Ověřuje přidání
+předmětu bez platby, správné odečtení ceny, nedostatek peněz, plný
+inventář, zápornou cenu, null a nákup za celý zbývající zůstatek.
+Ověřuje také, že odmítnutý nákup nezmění zlato ani počet předmětů.
+Nepředstavuje úplný test bojových pravidel nebo ovládání rozhraní.
+
+README.md
+Stručný návod ke spuštění, pravidla a přehled odpovědností.
+Tato příručka jej doplňuje podrobnějším porovnáním s původní verzí.
+
+Zdrojové soubory jsou nyní v src/. Složky bin/ a out/ slouží pro
+přeložené soubory .class; nejde o další verzi zdrojového kódu.
+Nastavení ve .vscode/settings.json určuje pro editor zdroje v src/
+a výstup do bin/. Složka lib/ je připravená pro případné knihovny.
+
+10. KOMENTÁŘE A STYL
+
+Běžné komentáře v upravovaném zdrojovém kódu jsou česky bez diakritiky,
+začínají malým písmenem a krátké poznámky nemají závěrečnou tečku.
+Od kódu je odděluje jeden nebo dva tabulátory a používají zápis // .
+Vysvětlují hlavně důvod nebo méně zřejmé pravidlo. Neopisují každý příkaz.
+
+MiniTui tvoří záměrnou výjimku: obsahuje podrobné anglické komentáře
+pro studium. Uživatelské texty a tato příručka používají správnou češtinu
+s diakritikou. Původní soubory v origin/ se stylisticky neupravují.
+
+11. CO JE HOTOVÉ A CO TEPRVE PLÁNUJEME
+
+Hotové sjednocení:
+- Main koordinuje průběh hry a uchovává pravidla souboje.
+- Player poskytuje menší operace nad vlastním stavem.
+- Přidání do inventáře je nezávislé na placení.
+- Shop obsahuje nabídku a ceny, ze kterých Main sestavuje nákup.
+- Staré nákupní a bojové metody hráče a demonstrační ekonomika
+  byly odstraněny.
+- Komentáře byly upraveny a vznikl tento přehled změn.
+
+Dohodnutý směr další práce:
+- Projít a vysvětlit MiniTui a jeho propojení s Main.
+- Při dalším rozšiřování zachovat stejné rozdělení odpovědností.
+  Nabídka a ceny se mění v Shop, účinky a pravidla v Main, obecné
+  změny stavu hráče v Player.
+- Připravit další předměty podle zvolené podoby hry. Konkrétní nabídka
+  a účinky ještě nejsou stanovené. Pouhé přidání typu do ItemType
+  nestačí; potřebuje také nabídku a implementaci účinku.
+
+Možné navazující úpravy, které zatím nejsou hotové ani definitivně vybrané:
+- Zobrazit konkrétní obsah inventáře místo samotného počtu položek.
+- Doplnit odvetu a případně skóre zápasů.
+- Doladit ceny a sílu vybavení podle hraní.
+- Dočistit starší pomocné výpisy a sjednotit jejich názvy.
+
+Při rozšiřování nabídky bude potřeba zkontrolovat rozložení obrazovky:
+tlačítka obchodu přibývají směrem dolů, zatímco tlačítko Konec má pevnou
+pozici. Návrat k původním hodům kostkou byl pouze návrh; současný kód
+stále používá přímý výpočet poškození popsaný výše.
+
+12. JAK ZMĚNY RYCHLE OVĚŘIT
+
+Příkazy spusť z kořenové složky projektu s JDK 17 nebo novějším:
+
+  javac -encoding UTF-8 -d out src/*.java tests/*.java
+  java -cp out PlayerPurchaseTest
+  java -cp out Main
+
+Pokud javac není v PATH, lze použít přibalené nástroje:
+
+  src/oracleJdk-27/bin/javac -encoding UTF-8 -d out src/*.java tests/*.java
+  src/oracleJdk-27/bin/java -cp out PlayerPurchaseTest
+  src/oracleJdk-27/bin/java -cp out Main
+
+Pro porovnání doporučuji začít dvojicí Hrac → Player a metodami pro
+inventář a nákup. Poté projít Shop a Main. Právě tam je nejlépe vidět,
+jak se původní směs operací rozdělila mezi spolupracující objekty.
