@@ -57,12 +57,13 @@ public class Player {
         inventory.remove(item);
     }
 
-    public int _getInventoryCount() {
+    
+    private int getInventoryCount() {
         return inventory.size();
     }
 
     public boolean setInventorySize(int newSize) {
-        if (newSize < 0 || newSize < _getInventoryCount()) return false;
+        if (newSize < 0 || newSize < getInventoryCount()) return false;
         this.inventorySize = newSize;
         return true;
     }
