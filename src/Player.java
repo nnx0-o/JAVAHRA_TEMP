@@ -6,11 +6,11 @@ public class Player {
     // ------------------------------------ inicializace ------------------------------------
     
     public static final int MAX_HEALTH = 4;
-    private final String name;
     private int health;
+    private final String name;
     private int gold;
     private final List<Item> inventory;
-    private final int inventorySize;
+    private int inventorySize;
 
     public Player(String name) {
         this.name = name;
@@ -26,6 +26,7 @@ public class Player {
         return name;
     }
 
+
     public int getGold() {
         return gold;
     }
@@ -37,34 +38,38 @@ public class Player {
     // ------------------------------------ inventar ------------------------------------
 
     public List<Item> getInventory() {
-        return inventory;
+        return List.copyOf(inventory);
     }
 
     public int getInventorySize() {
         return inventorySize;
     }
 
+
+    
     public boolean addToInventory(Item item) {		// pridani do inventare, pokud je misto
         if (item == null || inventory.size() >= inventorySize) return false;
         inventory.add(item);
         return true;
     }
 
-    public boolean removeFromInventory(Item item) {
-        return inventory.remove(item);
+    public void removeFromInventory(Item item) {
+        inventory.remove(item);
     }
 
-    public boolean setInventorySize(int inventorySize) {
-        if (inventorySize < 0) return false;
-        while (inventory.size() > inventorySize) {
-            inventory.remove(inventory.size() - 1);
-        }
+    public int _getInventoryCount() {
+        return inventory.size();
+    }
+
+    public boolean setInventorySize(int newSize) {
+        if (newSize < 0 || newSize < _getInventoryCount()) return false;
+        this.inventorySize = newSize;
         return true;
     }
 
-    public boolean resetInventory() {
+
+    public void resetInventory() {
         inventory.clear();
-        return true;
     }
 
     // ------------------------------------ zdravi ------------------------------------
