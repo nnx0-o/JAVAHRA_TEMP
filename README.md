@@ -21,6 +21,8 @@ Zadejte jména hráčů; prázdný vstup použije Pepu a Mahulenu. Každý zač�
 - Lektvar z inventáře obnoví až 2 životy, nejvýše do maxima 4, a spotřebuje se.
 - Hru ukončíte tlačítkem „Konec“ nebo Ctrl+C.
 
+`MiniTui` automaticky sleduje velikost terminálu na Linuxu, macOS a BSD i velikost a posun viditelné oblasti konzole ve Windows. Při zmenšení ořízne obsah, přesune stavový řádek ke spodnímu okraji a po zvětšení obsah znovu vykreslí. Souřadnice prvků, rozepsaný vstup a výběr zůstávají zachovány; použití API se nemění. Ve Windows používá systémový Windows PowerShell, na unixových systémech `stty` a `/dev/tty`.
+
 Po platné akci se hráči vystřídají. Nedostupné léčení tah nespotřebuje. Hráč s nulovým zdravím prohrává; vítěz získá 1 zlato. Opakovaná obrana může zápas prodlužovat – limit tahů zatím není.
 
 ## Rozdělení odpovědností
@@ -44,5 +46,7 @@ Jednoduchý test bez dalších knihoven ověřuje přidávání bez platby, úsp
 javac -encoding UTF-8 -d out src/*.java tests/*.java
 java -cp out PlayerPurchaseTest
 ```
+
+Regresní test terminálu používá stejný překlad a spouští se příkazem `java -cp out MiniTuiTerminalTest`. Ověřuje ořezání malých oken, změny velikosti a posun viditelné oblasti i šipky na obou platformách. Na Linuxu navíc používá `script` pro skutečný pseudoterminál a kontroluje změny velikosti bez stisku klávesy, ukončení, opětovné spuštění a obnovení nastavení terminálu.
 
 Podrobné porovnání s původní verzí a přehled dalších kroků najdete v [příručce změn](PRIRUCKA_ZMEN.txt).

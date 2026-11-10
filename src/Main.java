@@ -37,7 +37,7 @@ public class Main {		// propojeni objektu a rizeni cele hry
         int shopRow = 8;
         for (var offer : shop.getStock().entrySet()) {	// tlacitka vychazi z nabidky obchodu
             Item item = offer.getKey();
-            int price = offer.getValue();
+            int price = shop.getPrice(item);
             add(shopping, new MiniTui.Button(3, shopRow, 0,
                     item.getName() + " (" + price + "g)", () -> buy(item, price)));
             shopRow += 2;
@@ -73,8 +73,18 @@ public class Main {		// propojeni objektu a rizeni cele hry
 
     private void buy(Item item, int price) {
         if (fighting || players[turn] == null) return;
-        message.setText(players[turn].buy(item, price) ? "Koupeno: " + item.getName()
-                : "Nedostatek zlata nebo plný inventář.");
+        if (shop.getStock().getOrDefault(item, 0) == 0) {
+            message.setText("Tento předmět už není na skladě.");
+            return;
+        }
+
+        if (!players[turn].buy(item, price)) {
+            message.setText("Nedostatek zlata nebo plný inventář.");
+            return;
+        }
+
+        shop.buy(item, 1);
+        message.setText("Koupeno: " + item.getName());
     }
 
     private void ready() {

@@ -1,32 +1,45 @@
-import java.util.ArrayList;
-import java.util.List;
-
 public class Test {
 
-    public MiniTui tui = new MiniTui();
+    private static final int DEMO_LAYER = 0;
+    private static final int STORE_LAYER = 1;
 
-    private final List<MiniTui.Element> page1 = new ArrayList<>();
-    private final List<MiniTui.Element> page2 = new ArrayList<>();
+    public final MiniTui tui = new MiniTui();
 
-    MiniTui.Title globalTitle = tui.add(new MiniTui.Title(2, 1, 0, "Whale Cum"));
+    public Test() {
+        // Layer 0: button demo.
+        tui.add(new MiniTui.Title(2, 1, DEMO_LAYER, "Button demo"));
+        MiniTui.Label variableLabel = tui.add(new MiniTui.Label(2, 3, DEMO_LAYER, "Hellou"));
+        tui.add(new MiniTui.Button(2, 5, DEMO_LAYER, "Open store", () -> {
+            tui.setLayer(STORE_LAYER);
+        }));
+        MiniTui.Button variableButton = tui.add(
+                new MiniTui.Button(2, 7, DEMO_LAYER, "Its not Hellou yknow...", null));
+        variableButton.action = () -> {
+            if (variableButton.getText().equals("Its not Hellou yknow...")) {
+                variableLabel.setText("Hellow");
+                variableButton.setText("Its not Hellow yknow...");
+            } else {
+                variableLabel.setText("Hellou");
+                variableButton.setText("Its not Hellou yknow...");
+            }
+        };
 
-    MiniTui.Box page2Box = add(page2, new MiniTui.Box(2, 3, 0, 80, 20, "Good Choice", "\033[36m"));
-    MiniTui.Label page2Labella = add(page2, new MiniTui.Label(5, 5, 0, "yasss"));
+        tui.add(new MiniTui.Button(2, 9, DEMO_LAYER, "Exit", tui::stop));
 
-    MiniTui.Box page1Box = add(page1, new MiniTui.Box(2, 3, 0, 80, 20, "Jsme na:", "\033[36m"));
-    MiniTui.Label page1Label = add(page1, new MiniTui.Label(5, 5, 0, "strance 1"));
-    MiniTui.Label page1Labele = add(page1, new MiniTui.Label(5, 7, 0, "sex?"));
-    MiniTui.Button page1SexButton = add(page1, new MiniTui.Button(5, 9, 0, "yeppa", () -> {show(page1, false); show(page2, true);}));
+        // Layer 1: store.
+        tui.add(new MiniTui.Title(2, 1, STORE_LAYER, "Store"));
+        tui.add(new MiniTui.Button(2, 5, STORE_LAYER, "Back to demo", () -> tui.setLayer(DEMO_LAYER)));
+        tui.add(new MiniTui.Button(2, 9, STORE_LAYER, "Exit", tui::stop));
 
-    private <T extends MiniTui.Element> T add(List<MiniTui.Element> group, T element) {
-        group.add(element);
-        return tui.add(element);
+        tui.setStatus("Up/Down: select | Enter: activate | [/]: switch layer | Ctrl+C: exit");
+        tui.setLayer(DEMO_LAYER);
+
+        MiniTui.Label bottomLabel = tui.add(new MiniTui.Label(10, 10, 0, "ahoj"));
+
+        variableButton.setText(bottomLabel.getText());
     }
 
-    private void show(List<MiniTui.Element> group, boolean visible) {
-        for (MiniTui.Element element : group) element.visible = visible;
-    }
-
+    // entry point
     public static void main(String[] args) {
         new Test().tui.start();
     }
