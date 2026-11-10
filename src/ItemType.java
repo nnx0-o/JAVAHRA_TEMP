@@ -3,5 +3,5 @@ public enum ItemType {
     POTION,
     SHIELD,
     ARMOR,
-    BOW;
+    BOW
 }

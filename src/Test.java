@@ -34,7 +34,7 @@ public class Test {
         tui.setStatus("Up/Down: select | Enter: activate | [/]: switch layer | Ctrl+C: exit");
         tui.setLayer(DEMO_LAYER);
 
-        MiniTui.Label bottomLabel = tui.add(new MiniTui.Label(10, 10, 0, "ahoj"));
+        MiniTui.Label bottomLabel = tui.add(new MiniTui.Label(30, 30, 0, "Ahoj~"));
 
         variableButton.setText(bottomLabel.getText());
     }

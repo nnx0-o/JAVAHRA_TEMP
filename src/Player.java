@@ -4,12 +4,14 @@ public class Player {
     private int health;
     private int gold;
     private final ItemCollection<Item> inventory;
+    private int inventorySize;
 
     public Player(String name) {
         this.name = name;
         this.health = MAX_HEALTH;
         this.gold = 10;
         this.inventory = new ItemCollection<>(5);
+        this.inventorySize = ;
     }
 
     public boolean addToInventory(Item item) {		// pridani bez platby
