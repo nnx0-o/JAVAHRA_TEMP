@@ -20,7 +20,7 @@ public class Main {		// propojeni objektu a rizeni cele hry
 
     public Main() {
         tui.add(new MiniTui.Title(2, 1, 0, "DUEL 1v1"));
-        stats = tui.add(new MiniTui.Label(3, 3, 0, "Zadejte jména obou hráčů."));
+        stats = tui.add(new MiniTui.Label(3, 3, 0, "Zadejte jména obou hráčů:"));
         details = tui.add(new MiniTui.Label(3, 4, 0, ""));
         message = tui.add(new MiniTui.Label(3, 6, 0, ""));
         MiniTui.Input first = add(setup, new MiniTui.Input(3, 8, 0, "Hráč 1", "Pepa", 18));
@@ -92,7 +92,9 @@ public class Main {		// propojeni objektu a rizeni cele hry
         }
     }
 
-    private boolean canAct() { return fighting && !finished; }
+    private boolean canAct() {
+        return fighting && !finished;
+    }
 
     private int findItem(Player player, ItemType type) {
         for (int i = 0; i < player.getInventory().size(); i++) {

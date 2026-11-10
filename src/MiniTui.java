@@ -33,9 +33,12 @@ public class MiniTui {
         public volatile boolean visible = true;
 
         public Element(int x, int y, int z, boolean focusable) {
-            this.x = x; this.y = y; this.z = z;
+            this.x = x;
+            this.y = y;
+            this.z = z;
             this.focusable = focusable;
         }
+
         // Return display text and optional ANSI escape sequences; do not print
         // here. renderScreen() combines all widget output into a single frame.
         // termWidth may be shortened to the next widget's x position.
@@ -51,12 +54,16 @@ public class MiniTui {
         public Title(int x, int y, int z, String text) {
             this(x, y, z, text, "\033[1;36m");
         }
+
         public Title(int x, int y, int z, String text, String ansiColor) {
             super(x, y, z, false);
             this.text = text;
             this.colorCode = ansiColor;
         }
-        public void setText(String text) { this.text = text; }
+
+        public void setText(String text) {
+            this.text = text;
+        }
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
@@ -121,12 +128,19 @@ public class MiniTui {
     // setText() when player statistics or messages need to change.
     public static class Label extends Element {
         private volatile String text;
+
         public Label(int x, int y, int z, String text) {
             super(x, y, z, false);
             this.text = text;
         }
-        public void setText(String text) { this.text = text; }
-        public String getText() { return text; }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getText() {
+            return text;
+        }
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
@@ -152,13 +166,26 @@ public class MiniTui {
             this.width = width;
         }
 
-        public String getValue() { return value; }
+        public String getValue() {
+            return value;
+        }
+
         // Programmatic assignment does not invoke onChange. The keyboard handler
         // explicitly calls onChange after user edits and onSubmit after Enter.
         // Returning this from the registration methods allows chained calls.
-        public void setValue(String val) { this.value = val; }
-        public Input onChange(Consumer<String> cb) { this.onChange = cb; return this; }
-        public Input onSubmit(Consumer<String> cb) { this.onSubmit = cb; return this; }
+        public void setValue(String val) {
+            this.value = val;
+        }
+
+        public Input onChange(Consumer<String> cb) {
+            this.onChange = cb;
+            return this;
+        }
+
+        public Input onSubmit(Consumer<String> cb) {
+            this.onSubmit = cb;
+            return this;
+        }
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
@@ -192,7 +219,9 @@ public class MiniTui {
             this.action = action;
         }
 
-        public void setText(String text) { this.text = text; }
+        public void setText(String text) {
+            this.text = text;
+        }
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
@@ -240,10 +269,21 @@ public class MiniTui {
 
     // Register work to run before each render. Main uses this for refresh().
     // This is UI refresh timing, not a game turn: turns advance only in game actions.
-    public void onTick(Runnable callback) { tickListeners.add(callback); }
-    public void setStatus(String status) { this.statusText = status; }
-    public int getTerminalWidth() { return termWidth; }
-    public int getTerminalHeight() { return termHeight; }
+    public void onTick(Runnable callback) {
+        tickListeners.add(callback);
+    }
+
+    public void setStatus(String status) {
+        this.statusText = status;
+    }
+
+    public int getTerminalWidth() {
+        return termWidth;
+    }
+
+    public int getTerminalHeight() {
+        return termHeight;
+    }
 
     // Switching screens cancels editing and selects an eligible widget again.
     // Calling this with the current layer also resets focus after hiding a group.
@@ -253,8 +293,14 @@ public class MiniTui {
         this.focusedElement = null;
         ensureFocusOnCurrentLayer();
     }
-    public int getLayer() { return currentZ; }
-    public void stop() { this.running = false; }
+
+    public int getLayer() {
+        return currentZ;
+    }
+
+    public void stop() {
+        this.running = false;
+    }
 
     // The loop order is: consume queued keys, refresh terminal size, run tick
     // callbacks, render, sleep. Callbacks are synchronous: a slow callback delays
@@ -276,7 +322,8 @@ public class MiniTui {
             try {
                 if (isWindows) readWindowsKeys();
                 else readUnixKeys();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }, "TUI-Input");
         // A daemon thread alone cannot keep the JVM alive after the main thread
         // finishes. stop() changes a flag; it does not unblock a pending input read.
@@ -292,6 +339,7 @@ public class MiniTui {
                 while ((key = keyQueue.poll()) != null) {
                     handleKey(key);
                 }
+
                 // Unix resizing is checked every fifth tick, including tick zero.
                 // Windows size updates arrive through its input reader instead.
                 if (!isWindows && tickCount % 5 == 0) {
@@ -312,7 +360,10 @@ public class MiniTui {
             // snapshot of the user's previous settings. Forced process termination
             // or an OS signal does not guarantee this finally block will run.
             if (!isWindows) {
-                try { execSh("stty sane < /dev/tty"); } catch (Exception ignored) {}
+                try {
+                    execSh("stty sane < /dev/tty");
+                } catch (Exception ignored) {
+                }
             }
             System.out.print("\033[?25h\033[?1049l");
             System.out.flush();
@@ -381,7 +432,8 @@ public class MiniTui {
     // Keep valid focus. If a screen change or visibility change invalidates it,
     // fall back to the first eligible widget in registration order, or null.
     private void ensureFocusOnCurrentLayer() {
-        if (focusedElement != null && focusedElement.z == currentZ && focusedElement.focusable && focusedElement.visible) return;
+        if (focusedElement != null && focusedElement.z == currentZ
+                && focusedElement.focusable && focusedElement.visible) return;
         focusedElement = elements.stream()
                 .filter(e -> e.z == currentZ && e.focusable && e.visible)
                 .findFirst()
@@ -524,8 +576,14 @@ public class MiniTui {
                                 case 'B' -> keyQueue.offer("DOWN");
                                 case 'C' -> keyQueue.offer("RIGHT");
                                 case 'D' -> keyQueue.offer("LEFT");
-                                case '5' -> { in.read(); keyQueue.offer("PGUP"); }
-                                case '6' -> { in.read(); keyQueue.offer("PGDN"); }
+                                case '5' -> {
+                                    in.read();
+                                    keyQueue.offer("PGUP");
+                                }
+                                case '6' -> {
+                                    in.read();
+                                    keyQueue.offer("PGDN");
+                                }
                             }
                         }
                     } else {
@@ -551,7 +609,8 @@ public class MiniTui {
                 termHeight = Integer.parseInt(parts[0]);
                 termWidth = Integer.parseInt(parts[1]);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     // Run an internal shell command and capture stdout. Current callers pass

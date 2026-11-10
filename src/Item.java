@@ -1,8 +1,7 @@
 public class Item {
-
     private final ItemType itemType;
     private final String name;
-    
+
     public Item(ItemType itemType, String name) {
         this.itemType = itemType;
         this.name = name;
@@ -19,6 +18,5 @@ public class Item {
     @Override
     public String toString() {
         return "Predmet [druhPredmetu=" + itemType + ", jmeno=" + name + "]";
-    }   
-
+    }
 }

@@ -39,7 +39,9 @@ public class Player {
         health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
     }
 
-    public boolean isAlive() { return health > 0; }
+    public boolean isAlive() {
+        return health > 0;
+    }
 
     public int getGold() {
         return gold;
@@ -63,5 +65,4 @@ public class Player {
     public String toString() {
         return "Hrac [name=" + name + ", zivoty=" + health + ", zlataky=" + gold + ", inventar=" + inventory + "]";
     }
-
 }

@@ -3,7 +3,7 @@ public class ItemCollection<E> {
     private int itemCount;
 
     public ItemCollection(int size) {
-        this.items = (E[])(new Object[size]);
+        this.items = (E[]) (new Object[size]);
         this.itemCount = 0;
     }
 
@@ -22,8 +22,8 @@ public class ItemCollection<E> {
     public E removeItem(int index) {
         if (!containsIndex(index)) return null;
         E removedItem = this.items[index];
-        for (int i=index; i<this.itemCount-1; i++) {	// zaplni mezeru po odebranem predmetu
-            this.items[i] = this.items[i+1];
+        for (int i = index; i < this.itemCount - 1; i++) {	// zaplni mezeru po odebranem predmetu
+            this.items[i] = this.items[i + 1];
         }
         this.items[--this.itemCount] = null;
         return removedItem;
@@ -44,10 +44,9 @@ public class ItemCollection<E> {
     @Override
     public String toString() {
         String output = "Polozky\n";
-        for (int i=0; i<this.itemCount; i++) {
+        for (int i = 0; i < this.itemCount; i++) {
             output += this.items[i] + "\n";
         }
         return output;
     }
-
 }
