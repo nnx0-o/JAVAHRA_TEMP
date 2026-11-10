@@ -1,37 +1,82 @@
+import java.util.ArrayList;
+import java.util.List;
+
 public class Player {
+    
+    // ------------------------------------ inicializace ------------------------------------
+    
     public static final int MAX_HEALTH = 4;
     private final String name;
     private int health;
     private int gold;
-    private final ItemCollection<Item> inventory;
-    private int inventorySize;
+    private final List<Item> inventory;
+    private final int inventorySize;
 
     public Player(String name) {
         this.name = name;
         this.health = MAX_HEALTH;
         this.gold = 10;
-        this.inventory = new ItemCollection<>(5);
-        this.inventorySize = ;
+        this.inventory = new ArrayList<>();
+        this.inventorySize = 5;
     }
 
-    public boolean addToInventory(Item item) {		// pridani bez platby
-        return inventory.addItem(item);
-    }
-
-    public boolean buy(Item item, int price) {
-        if (price < 0 || gold < price) return false;
-        if (!addToInventory(item)) return false;
-        gold -= price;		// platba az po uspesnem pridani
-        return true;
-    }
+    // ------------------------------------ zakladni metody ------------------------------------
 
     public String getName() {
         return name;
     }
 
+    public int getGold() {
+        return gold;
+    }
+
+    public void changeGold(int amount) {
+        gold = Math.max(0, gold + amount);
+    }
+
+    // ------------------------------------ inventar ------------------------------------
+
+    public List<Item> getInventory() {
+        return inventory;
+    }
+
+    public int getInventorySize() {
+        return inventorySize;
+    }
+
+    public boolean addToInventory(Item item) {		// pridani do inventare, pokud je misto
+        if (item == null || inventory.size() >= inventorySize) return false;
+        inventory.add(item);
+        return true;
+    }
+
+    public boolean removeFromInventory(Item item) {
+        return inventory.remove(item);
+    }
+
+    public boolean setInventorySize(int inventorySize) {
+        if (inventorySize < 0) return false;
+        while (inventory.size() > inventorySize) {
+            inventory.remove(inventory.size() - 1);
+        }
+        return true;
+    }
+
+    public boolean resetInventory() {
+        inventory.clear();
+        return true;
+    }
+
+    // ------------------------------------ zdravi ------------------------------------
+
     public int getHealth() {
         return health;
     }
+    
+    public boolean isAlive() {
+        return health > 0;
+    }
+
 
     public void takeDamage(int damage) {
         health = Math.max(0, health - Math.max(0, damage));
@@ -41,28 +86,8 @@ public class Player {
         health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
     }
 
-    public boolean isAlive() {
-        return health > 0;
-    }
-
-    public int getGold() {
-        return gold;
-    }
-
-    public ItemCollection<Item> getInventory() {
-        return inventory;
-    }
-
-    public void receiveGold(int amount) {
-        if (amount > 0) gold += amount;
-    }
-
-    public boolean spendGold(int amount) {
-        if (amount < 0 || gold < amount) return false;
-        gold -= amount;
-        return true;
-    }
-
+    // ------------------------------------ dalsi ------------------------------------
+    
     @Override
     public String toString() {
         return "Hrac [name=" + name + ", zivoty=" + health + ", zlataky=" + gold + ", inventar=" + inventory + "]";
