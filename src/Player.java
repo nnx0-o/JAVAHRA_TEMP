@@ -1,24 +1,20 @@
 import java.util.List;
 
 public class Player {
-    
+
     // ------------------------------------ inicializace ------------------------------------
-    
+
     public static final int MAX_HEALTH = 4;
     private int health;
     private final String name;
     private int gold;
-    private final List<Item> inventory;
-    private int inventorySize;
-    private Item equippedHA;
-    private Item equippedLA;
+    private final Inventory inventory;
 
     public Player(String name) {
         this.name = name;
         this.health = MAX_HEALTH;
         this.gold = 10;
-        this.inventory = new ArrayList<>();
-        this.inventorySize = 5;
+        this.inventory = new Inventory();
     }
 
     // ------------------------------------ zakladni metody ------------------------------------
@@ -39,34 +35,26 @@ public class Player {
     // ------------------------------------ inventar ------------------------------------
 
     public List<Item> getInventory() {
-        return List.copyOf(inventory);
+        return inventory.getItems();
     }
 
     public int getInventorySize() {
-        return inventorySize;
+        return inventory.getCapacity();
     }
 
 
-    
+
     public boolean addToInventory(Item item) {		// pridani do inventare, pokud je misto
-        if (item == null || inventory.size() >= inventorySize) return false;
-        inventory.add(item);
-        return true;
+        return inventory.add(item);
     }
 
     public void removeFromInventory(Item item) {
         inventory.remove(item);
     }
 
-    
-    private int getInventoryCount() {
-        return inventory.size();
-    }
 
     public boolean setInventorySize(int newSize) {
-        if (newSize < 0 || newSize < getInventoryCount()) return false;
-        this.inventorySize = newSize;
-        return true;
+        return inventory.setCapacity(newSize);
     }
 
 
@@ -79,7 +67,7 @@ public class Player {
     public int getHealth() {
         return health;
     }
-    
+
     public boolean isAlive() {
         return health > 0;
     }
@@ -94,7 +82,7 @@ public class Player {
     }
 
     // ------------------------------------ dalsi ------------------------------------
-    
+
     @Override
     public String toString() {
         return "Hrac [name=" + name + ", zivoty=" + health + ", zlataky=" + gold + ", inventar=" + inventory + "]";

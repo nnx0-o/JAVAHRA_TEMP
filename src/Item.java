@@ -1,4 +1,7 @@
 public class Item {
+
+    // ------------------------------------ inicializace ------------------------------------
+
     private final ItemType itemType;
     private final String name;
 

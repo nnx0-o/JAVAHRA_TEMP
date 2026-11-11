@@ -1,5 +1,7 @@
 public class Test {
 
+    // ------------------------------------ inicializace ------------------------------------
+
     private static final int DEMO_LAYER = 0;
     private static final int STORE_LAYER = 1;
 
