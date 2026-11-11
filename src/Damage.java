@@ -5,7 +5,8 @@ public class Damage {
     public enum DamageType {
         PHYSICAL,
         FIRE,
-        POISON
+        POISON,
+        HEAL
     }
 
     // ------------------------------------ inicializace ------------------------------------

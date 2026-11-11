@@ -20,6 +20,6 @@ public class Item {
 
     @Override
     public String toString() {
-        return "Predmet [druhPredmetu=" + itemType + ", jmeno=" + name + "]";
+        return "Předmět [druhPředmětu=" + itemType + ", jméno=" + name + "]";
     }
 }

@@ -10,6 +10,7 @@ public class Shop {
     private final Map<Item, Integer> prices = new LinkedHashMap<>();
 
     public Shop() {
+        
     }
 
     // ------------------------------------ gettery ------------------------------------

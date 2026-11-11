@@ -85,6 +85,6 @@ public class Player {
 
     @Override
     public String toString() {
-        return "Hrac [name=" + name + ", zivoty=" + health + ", zlataky=" + gold + ", inventar=" + inventory + "]";
+        return "Hráč [jméno=" + name + ", životy=" + health + ", zlaťáky=" + gold + ", inventář=" + inventory + "]";
     }
 }

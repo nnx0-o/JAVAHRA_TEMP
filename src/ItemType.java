@@ -6,6 +6,6 @@ public enum ItemType {
     HEAL,
     DEFEND,
     STAMINA,
-    HA,
-    LA
+    ARMOR,
+    TRINKET
 }

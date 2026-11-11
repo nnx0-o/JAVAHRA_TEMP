@@ -7,8 +7,8 @@ public class Inventory {
 
     private final List<Item> items;
     private int capacity;
-    private Item equippedHA;
-    private Item equippedLA;
+    private Item equippedArmor;
+    private Item equippedTrinket;
 
     public Inventory() {
         this(5);
@@ -16,7 +16,7 @@ public class Inventory {
 
     public Inventory(int capacity) {
         if (capacity < 0) {
-            throw new IllegalArgumentException("Inventory capacity cannot be negative");
+            throw new IllegalArgumentException("Kapacita inventáře nemůže být záporná");
         }
         this.items = new ArrayList<>();
         this.capacity = capacity;
@@ -40,14 +40,16 @@ public class Inventory {
         return true;
     }
 
+    // ------------------------------------ upravy inventare ------------------------------------
+
     public boolean remove(Item item) {
         boolean removed = items.remove(item);
         if (removed) {
-            if (item == equippedHA) {
-                equippedHA = null;
+            if (item == equippedArmor) {
+                equippedArmor = null;
             }
-            if (item == equippedLA) {
-                equippedLA = null;
+            if (item == equippedTrinket) {
+                equippedTrinket = null;
             }
         }
         return removed;
@@ -57,7 +59,6 @@ public class Inventory {
         return items.size();
     }
 
-    // ------------------------------------ upravy inventare ------------------------------------
 
     public boolean setCapacity(int newCapacity) {
         if (newCapacity < 0 || newCapacity < items.size()) {
@@ -69,33 +70,33 @@ public class Inventory {
 
     public void clear() {
         items.clear();
-        equippedHA = null;
-        equippedLA = null;
+        equippedArmor = null;
+        equippedTrinket = null;
     }
 
     // ------------------------------------ vybaveni ------------------------------------
 
-    public Item getEquippedHA() {
-        return equippedHA;
+    public Item getEquippedArmor() {
+        return equippedArmor;
     }
 
-    public Item getEquippedLA() {
-        return equippedLA;
+    public Item getEquippedTrinket() {
+        return equippedTrinket;
     }
 
-    public boolean equipHA(Item item) {
-        if (item == null || item.getItemType() != ItemType.HA || !items.contains(item)) {
+    public boolean equipArmor(Item item) {
+        if (item == null || item.getItemType() != ItemType.ARMOR || !items.contains(item)) {
             return false;
         }
-        equippedHA = item;
+        equippedArmor = item;
         return true;
     }
 
-    public boolean equipLA(Item item) {
-        if (item == null || item.getItemType() != ItemType.LA || !items.contains(item)) {
+    public boolean equipTrinket(Item item) {
+        if (item == null || item.getItemType() != ItemType.TRINKET || !items.contains(item)) {
             return false;
         }
-        equippedLA = item;
+        equippedTrinket = item;
         return true;
     }
 
