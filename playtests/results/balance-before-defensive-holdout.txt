@@ -1,0 +1,11 @@
+policy=defensive
+daggers vs fire: left=2 right=0 stalled=0 meanTurns=7.5
+daggers vs poison: left=1 right=1 stalled=0 meanTurns=7.5
+fire mirror: left=1 right=1 stalled=0 meanTurns=10.0
+shield mirror: left=0 right=0 stalled=2 meanTurns=160.0
+regeneration mirror: left=0 right=0 stalled=2 meanTurns=160.0
+poison vs cleanse: left=0 right=2 stalled=0 meanTurns=13.5
+fire vs cleanse: left=0 right=2 stalled=0 meanTurns=13.5
+physical vs plate: left=2 right=0 stalled=0 meanTurns=11.5
+poison vs threshold: left=0 right=2 stalled=0 meanTurns=13.5
+random matches: count=1000 complete=942 stalled=58 initialShopperWins=576/942 firstBattleShopperWins=613/946 battles=3773 meanBattleTurns=11.86 shopsWithoutWeapons=57

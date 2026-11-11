@@ -4,32 +4,20 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
-/**
- * A small terminal UI: widgets describe what to draw, and this class handles
- * keyboard input, focus, callbacks, and ANSI terminal output.
- *
- * Reading order: Element and its widgets, engine state, start(), handleKey(),
- * moveFocus(), renderScreen(), then the platform-specific input readers.
- *
- * Main builds the widgets and supplies game actions as callbacks. start() runs
- * on its calling thread and blocks until stopped. A separate daemon thread reads
- * keys into a queue; game callbacks run on the calling thread when it drains that
- * queue. The input thread does not directly execute game actions.
- */
+// prvky popisuji vzhled a tato trida resi klavesnici vyber a vystup terminalu
+// cteni kodu zacina prvky a pokracuje stavem smycky vstupem a vykreslovanim
+// hlavni trida dodava herni akce jako zpetna volani
+// smycka bezi ve volajicim vlakne a vstupni vlakno pouze uklada klavesy do fronty
 public class MiniTui {
 
-    /**
-     * Composable ANSI colors and text styles. Values are strings, so they work
-     * with the existing Title and Box color arguments and with custom elements.
-     * For example: Color.combine(Color.BOLD, Color.WHITE, Color.BG_BLUE).
-     * Effects and extended colors depend on the terminal's capabilities.
-     */
+    // barvy a styly jsou retezce ktere lze kombinovat pro nadpisy ramecky i vlastni prvky
+    // podpora rozsirenych barev zavisi na terminalu
     public static final class Color {
         private Color() {}
 
         public static final String RESET = "\033[0m";
 
-        // Foreground colors, including the terminal's configured default.
+        // barvy textu vcetne vychozi barvy terminalu
         public static final String BLACK = "\033[30m";
         public static final String RED = "\033[31m";
         public static final String GREEN = "\033[32m";
@@ -48,7 +36,7 @@ public class MiniTui {
         public static final String BRIGHT_WHITE = "\033[97m";
         public static final String DEFAULT = "\033[39m";
 
-        // Background colors can be combined with any foreground and styles.
+        // barvy pozadi lze kombinovat s barvami textu a styly
         public static final String BG_BLACK = "\033[40m";
         public static final String BG_RED = "\033[41m";
         public static final String BG_GREEN = "\033[42m";
@@ -79,46 +67,41 @@ public class MiniTui {
         public static final String DOUBLE_UNDERLINE = "\033[21m";
         public static final String OVERLINE = "\033[53m";
 
-        /**
-         * Combines codes in order without resetting between them. Any number of
-         * styles can accompany a foreground/background pair; for conflicting
-         * codes the terminal applies the last one. No codes returns an empty string.
-         */
+        // kody se spoji ve stejnem poradi bez prubezneho resetu
+        // pri konfliktu plati posledni kod a prazdny seznam vrati prazdny text
         public static String combine(String... codes) {
             StringBuilder result = new StringBuilder();
             for (String code : codes) result.append(Objects.requireNonNull(code, "code"));
             return result.toString();
         }
 
-        /** Wraps text with the supplied codes and resets all styling afterwards. */
+        // obali text zadanymi styly a na konci obnovi vychozi styl
         public static String apply(String text, String... codes) {
             return combine(codes) + Objects.requireNonNull(text, "text") + RESET;
         }
 
-        /** Selects a foreground from the terminal's 256-color palette (0-255). */
+        // barva textu z palety s 256 odstiny
         public static String foreground(int index) {
             return sgr(38, 5, channel(index));
         }
 
-        /** Selects a background from the terminal's 256-color palette (0-255). */
+        // barva pozadi z palety s 256 odstiny
         public static String background(int index) {
             return sgr(48, 5, channel(index));
         }
 
-        /** Selects a true-color foreground; each RGB component must be 0-255. */
+        // barva textu podle tri slozek od 0 do 255
         public static String foreground(int red, int green, int blue) {
             return sgr(38, 2, channel(red), channel(green), channel(blue));
         }
 
-        /** Selects a true-color background; each RGB component must be 0-255. */
+        // barva pozadi podle tri slozek od 0 do 255
         public static String background(int red, int green, int blue) {
             return sgr(48, 2, channel(red), channel(green), channel(blue));
         }
 
-        /**
-         * Builds any numeric SGR sequence, including styles without named
-         * constants. For example, sgr(22) turns off bold/dim. No parameters resets.
-         */
+        // vytvori ridici sekvenci stylu i bez pojmenovane konstanty
+        // volani bez parametru obnovi vychozi styl
         public static String sgr(int... parameters) {
             if (parameters.length == 0) return RESET;
             StringJoiner result = new StringJoiner(";", "\033[", "m");
@@ -137,17 +120,13 @@ public class MiniTui {
         }
     }
 
-    // WIDGETS
-    // Nested static classes can be created as new MiniTui.Button(...), without
-    // first needing an enclosing MiniTui instance. add() registers them later.
-    // Common contract for every widget. x and y are zero-based column/row
-    // positions; z selects a screen, not overlapping depth within one screen.
-    // Only visible widgets on currentZ are rendered. focusable controls whether
-    // keyboard navigation can select the widget.
+    // ------------------------------------ prvky rozhrani ------------------------------------
+    // vnorene staticke tridy lze vytvorit bez instance rozhrani a pozdeji zaregistrovat
+    // souradnice x a y zacinaji nulou a z vybira obrazovku
+    // viditelne prvky na aktivni obrazovce se vykresli a vybiratelne prijimaji ovladani
     public static abstract class Element {
-        // volatile makes individual updates visible across threads. It does not
-        // make several field changes one atomic operation; normal game updates
-        // should stay in callbacks on the UI loop thread.
+        // volatile zviditelni jednotlivou zmenu ostatnim vlaknum
+        // vice zmen ale netvori atomickou operaci a herni akce patri do hlavni smycky
         public volatile int x, y, z;
         public volatile boolean focusable;
         public volatile boolean visible = true;
@@ -179,23 +158,21 @@ public class MiniTui {
             return visible;
         }
 
-        /**
-         * Returns the full stored text without rendering decorations or clipping.
-         * Inputs return their value; boxes return their title. Custom elements
-         * with no text return an empty string unless they override this method.
-         */
+        // vrati cely ulozeny text bez dekoraci a oriznuti
+        // vstup vraci hodnotu a ramecek nadpis
+        // vlastni prvek bez textu muze tuto metodu prepsat
         public String getText() {
             return "";
         }
 
-        // Return display text and optional ANSI escape sequences; do not print
-        // here. renderScreen() combines all widget output into a single frame.
-        // termWidth may be shortened to the next widget's x position.
+        // vrati text a pripadne ridici sekvence ale nic primo nevypisuje
+        // vykreslovaci smycka spoji vsechny prvky do jednoho snimku
+        // sirka muze koncit u sousedniho prvku vpravo
         public abstract String render(boolean focused, boolean editing, int termWidth);
     }
 
-    // A non-interactive heading padded with '=' characters and an ANSI color.
-    // The short constructor delegates to the full one with a default color.
+    // neinteraktivni nadpis s barevnou vyplni
+    // kratsi konstruktor pouziva vychozi barvu
     public static class Title extends Element {
         private volatile String text;
         private volatile String colorCode;
@@ -225,8 +202,8 @@ public class MiniTui {
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
-            // Reserve room for padding, trim the title, then build a centered bar.
-            // These lengths count Java characters, not terminal display columns.
+            // nejprve vyhradime okraje a potom zkratime nadpis
+            // pocitame znaky javy a ne skutecnou sirku bunek terminalu
             int maxAllowed = Math.max(4, termWidth - x - 2);
             String cleanText = text.length() > maxAllowed - 4 ? text.substring(0, maxAllowed - 4) : text;
             int barWidth = Math.max(cleanText.length() + 2, maxAllowed);
@@ -238,8 +215,8 @@ public class MiniTui {
         }
     }
 
-    // A border made from several cursor-positioned fragments. The interior is
-    // left untouched so other widgets can be drawn there.
+    // ramecek se sklada z casti s absolutnim umistenim kurzoru
+    // vnitrek nechava prostor dalsim prvkum
     public static class Box extends Element {
         public volatile int width, height;
         public volatile String title;
@@ -284,28 +261,28 @@ public class MiniTui {
             StringBuilder sb = new StringBuilder();
             sb.append(colorCode);
 
-            // Top border
+            // horni hrana
             String top = w < 6 ? "+" + "-".repeat(w - 2) + "+"
                     : "+- " + t + " " + "-".repeat(Math.max(0, w - t.length() - 5)) + "+";
-            // ESC[row;columnH moves the terminal cursor. ANSI coordinates start
-            // at 1, which is why the widget's zero-based positions get +1.
+            // ridici sekvence presune kurzor na radek a sloupec
+            // terminal pocita od jedne a proto k souradnicim pricteme jednicku
             sb.append(String.format("\033[%d;%dH%s", y + 1, x + 1, top));
 
-            // Left & right walls only (hollow inside so inner elements stay intact)
+            // pouze bocni steny aby vnitrni prvky zustaly viditelne
             for (int i = 1; i < height - 1; i++) {
                 sb.append(String.format("\033[%d;%dH|", y + 1 + i, x + 1));
                 sb.append(String.format("\033[%d;%dH|", y + 1 + i, x + w));
             }
 
-            // Bottom border
+            // dolni hrana
             String bot = "+" + "-".repeat(Math.max(0, w - 2)) + "+";
             sb.append(String.format("\033[%d;%dH%s", y + height, x + 1, bot)).append(Color.RESET);
             return sb.toString();
         }
     }
 
-    // Plain, non-focusable text. Main keeps references to labels and calls
-    // setText() when player statistics or messages need to change.
+    // obycejny text bez moznosti vyberu
+    // hlavni trida muze menit jeho obsah pri zmene statistik nebo zpravy
     public static class Label extends Element {
         private volatile String text;
 
@@ -330,9 +307,8 @@ public class MiniTui {
         }
     }
 
-    // A text field has two separate states: focused (selected by navigation)
-    // and editing (typed characters change its value). Enter toggles editing.
-    // Consumer<String> is a callback taking the current text as its argument.
+    // vstup oddeluje vyber klavesnici od rezimu uprav
+    // enter prepina upravy a zpetne volani dostava aktualni text
     public static class Input extends Element {
         public volatile String label;
         public volatile String value;
@@ -372,9 +348,9 @@ public class MiniTui {
             return onSubmit;
         }
 
-        // Programmatic assignment does not invoke onChange. The keyboard handler
-        // explicitly calls onChange after user edits and onSubmit after Enter.
-        // Returning this from the registration methods allows chained calls.
+        // prime nastaveni hodnoty nevola obsluhu zmen
+        // klavesnice ji vola po uprave a potvrzeni vola az po enteru
+        // registracni metody vraceji stejnou instanci pro retezene volani
         public void setValue(String val) {
             this.value = val;
         }
@@ -391,9 +367,8 @@ public class MiniTui {
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
-            // width limits the visible portion, not the stored input length.
-            // Long values show their last characters so the typing end stays visible.
-            // The renderer also clips the label/decorations to the viewport.
+            // sirka omezuje pouze viditelnou cast a ne ulozenou delku
+            // u dlouhe hodnoty je videt jeji konec a dekorace orizne vykreslovaci smycka
             int fieldWidth = Math.max(1, Math.min(width, termWidth - x - label.length() - 7));
             String displayVal = value.length() > fieldWidth
                     ? value.substring(value.length() - fieldWidth)
@@ -409,9 +384,8 @@ public class MiniTui {
         }
     }
 
-    // Runnable is a callback with no arguments and no return value. The button
-    // stores it; handleKey() calls action.run() when Enter activates this button.
-    // Rendering only changes the visual style and never triggers the action.
+    // akce tlacitka nema argumenty ani navratovou hodnotu
+    // enter ji spusti ale samotne vykresleni nikdy neprovadi akci
     public static class Button extends Element {
         public volatile String text;
         public Runnable action;
@@ -444,30 +418,28 @@ public class MiniTui {
         }
     }
 
-    // ENGINE STATE
-    // CopyOnWriteArrayList lets iteration continue safely if a list changes,
-    // at the cost of copying its array on modification. This suits lists that
-    // are populated during setup and read much more often than they change.
+    // ------------------------------------ stav smycky ------------------------------------
+    // seznam kopiruje pole pri zmene aby slo bezpecne pokracovat v prochazeni
+    // cteni prvku je castejsi nez jejich pridavani
     private final List<Element> elements = new CopyOnWriteArrayList<>();
-    // Thread-safe handoff: the input thread offers normalized key names, and
-    // the UI loop polls them without waiting. Reading the physical input can block
-    // without blocking screen updates.
+    // vstupni vlakno predava nazvy klaves do bezpecne fronty
+    // hlavni smycka je vybira bez cekani a zustava nezavisla na cteni terminalu
     private final BlockingQueue<String> keyQueue = new LinkedBlockingQueue<>();
     private final List<Runnable> tickListeners = new CopyOnWriteArrayList<>();
 
-    // Focus is the selected widget; editing applies only to an Input widget.
-    // Terminal size starts at 80x24 until a platform reader obtains real values.
+    // vyber oznacuje aktivni prvek a upravy se tykaji jen textoveho vstupu
+    // vychozi velikost je 80 krat 24 dokud se nezjisti skutecna
     private volatile Element focusedElement = null;
     private volatile boolean editing = false;
     private volatile boolean running = false;
     private volatile int currentZ = 0;
-    // Publish width, height and the Windows scroll-buffer origin together.
-    // A new snapshot also invalidates the frame after a shrink/grow round trip.
+    // sirka vyska a posun konzole se zverejni spolecne
+    // novy snimek geometrie vynuti obnovu i po rychlem zmenseni a zvetseni
     private record TerminalGeometry(int width, int height, int left, int top) {}
     private volatile TerminalGeometry terminal = new TerminalGeometry(80, 24, 0, 0);
-    private volatile String statusText = "Arrows: Move | Enter: Edit/Click | [ / ]: Switch Screen | Ctrl+C: Quit";
-    // Only the UI loop accesses this cache. Identical frames are not printed
-    // again, although callbacks and frame construction still run each tick.
+    private volatile String statusText = "Šipky: výběr | Enter: potvrdit | [ / ]: obrazovka | Ctrl+C: konec";
+    // mezipamet pouziva pouze hlavni smycka
+    // stejne snimky se znovu netisknou ale zpetna volani stale probihaji
     private String lastFrame = "";
     private TerminalGeometry lastRenderedGeometry;
     private volatile Process windowsProcess;
@@ -477,9 +449,8 @@ public class MiniTui {
     private String unixTerminalMode;
     private boolean terminalRestored;
 
-    // Preserve the concrete widget type in the return value. For example,
-    // Label stats = tui.add(new Label(...)) needs no cast from Element.
-    // The first eligible widget becomes the initial keyboard selection.
+    // navratova hodnota zachova konkretni typ pridaneho prvku
+    // prvni vhodny prvek se stane vybranym
     public <T extends Element> T add(T el) {
         elements.add(el);
         if (focusedElement == null && el.focusable && el.z == currentZ && el.visible) {
@@ -488,8 +459,14 @@ public class MiniTui {
         return el;
     }
 
-    // Register work to run before each render. Main uses this for refresh().
-    // This is UI refresh timing, not a game turn: turns advance only in game actions.
+    public void clear() {
+        elements.clear(); // pri zmene obrazovky nezustavaji skryte ovladaci prvky
+        focusedElement = null;
+        editing = false;
+    }
+
+    // zaregistruje praci pred vykreslenim
+    // obnova rozhrani neposouva herni tah
     public void onTick(Runnable callback) {
         tickListeners.add(callback);
     }
@@ -502,12 +479,12 @@ public class MiniTui {
         return statusText;
     }
 
-    /** Returns an unmodifiable snapshot; the elements themselves remain mutable. */
+    // vrati nemenitelny snimek seznamu ale samotne prvky zustavaji menitelne
     public List<Element> getElements() {
         return List.copyOf(elements);
     }
 
-    /** Returns the currently selected element, or null if none is selected. */
+    // vrati vybrany prvek nebo null pokud zadny neni
     public Element getFocusedElement() {
         return focusedElement;
     }
@@ -528,8 +505,8 @@ public class MiniTui {
         return terminal.height();
     }
 
-    // Switching screens cancels editing and selects an eligible widget again.
-    // Calling this with the current layer also resets focus after hiding a group.
+    // zmena obrazovky ukonci upravy a znovu vybere vhodny prvek
+    // funguje i pri opetovnem nastaveni stejne obrazovky
     public void setLayer(int z) {
         this.currentZ = z;
         this.editing = false;
@@ -545,10 +522,10 @@ public class MiniTui {
         this.running = false;
     }
 
-    // Input and geometry are monitored off the UI thread, including while idle.
-    // Callbacks still run synchronously on the calling thread, as before.
+    // vstup a velikost okna se sleduji mimo hlavni vlakno i pri necinnosti
+    // zpetna volani se stale provadeji ve volajicim vlakne
     public void start() {
-        if (running) throw new IllegalStateException("MiniTui is already running");
+        if (running) throw new IllegalStateException("MiniTui už běží");
         running = true;
         boolean isWindows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
         terminalRestored = false;
@@ -579,14 +556,14 @@ public class MiniTui {
         try {
             if (!isWindows) {
                 unixTerminalMode = execSh("stty -g < /dev/tty").trim();
-                // Read Ctrl+C as input so the normal cleanup path always runs.
+                // ctrl c cteme jako klavesu aby probehl bezny uklid terminalu
                 execSh("stty -echo -icanon -isig min 1 time 0 < /dev/tty");
                 updateUnixTermSize();
             }
             inputThread.start();
-            // Windows must enable VT output before the first escape is printed.
+            // windows musi povolit ridici sekvence pred prvnim vykreslenim
             if (isWindows && !ready.await(5, TimeUnit.SECONDS)) {
-                throw new IOException("Timed out opening the Windows console");
+                throw new IOException("Vypršel čas na otevření konzole Windows");
             }
             if (inputFailure != null) throw inputFailure;
             System.out.print("\033[?1049h\033[?25l");
@@ -608,7 +585,7 @@ public class MiniTui {
         } catch (RuntimeException failure) {
             throw failure;
         } catch (Exception failure) {
-            throw new IllegalStateException("MiniTui needs a working interactive terminal", failure);
+            throw new IllegalStateException("MiniTui potřebuje funkční interaktivní terminál", failure);
         } finally {
             boolean interrupted = Thread.interrupted();
             running = false;
@@ -623,7 +600,7 @@ public class MiniTui {
             try {
                 Runtime.getRuntime().removeShutdownHook(shutdownHook);
             } catch (IllegalStateException shuttingDown) {
-                // The hook has already started and shares the cleanup guard.
+                // ukoncovaci obsluha uz bezi a sdili ochranu proti dvojimu uklidu
             }
             if (interrupted) Thread.currentThread().interrupt();
         }
@@ -655,7 +632,7 @@ public class MiniTui {
         } catch (InterruptedException interruption) {
             interrupted = true;
         } catch (IOException ignored) {
-            // The console may have been closed by the user during shutdown.
+            // uzivatel mohl konzoli zavrit behem ukoncovani
         } finally {
             unixTerminalMode = null;
             windowsOutputMode = windowsInputMode = -1;
@@ -663,8 +640,8 @@ public class MiniTui {
         }
     }
 
-    // This method interprets normalized input, independently of the OS reader.
-    // In editing mode, keys modify text; otherwise they navigate or activate UI.
+    // zpracuje sjednocene klavesy nezavisle na operacnim systemu
+    // v rezimu uprav meni text a jinak vybira nebo aktivuje prvky
     private void handleKey(String key) {
         if (key.equals("CTRL_C")) {
             running = false;
@@ -674,28 +651,27 @@ public class MiniTui {
         if (editing && focusedElement instanceof Input input) {
             if (key.equals("ENTER") || key.equals("ESC")) {
                 editing = false;
-                // Escape exits editing without submission, but keeps typed text;
-                // it does not restore the field's value from before editing.
+                // escape ukonci upravy bez potvrzeni ale ponecha rozepsanou hodnotu
                 if (key.equals("ENTER") && input.onSubmit != null) {
                     input.onSubmit.accept(input.value);
                 }
             } else if (key.equals("BACKSPACE")) {
                 if (!input.value.isEmpty()) {
-                    input.value = input.value.substring(0, input.value.length() - 1);
+                    input.value = input.value.substring(0, input.value.offsetByCodePoints(input.value.length(), -1));
                     if (input.onChange != null) input.onChange.accept(input.value);
                 }
-            // Current limitation: only printable ASCII is accepted for typing.
-            // Czech text supplied by the program can still be rendered, but users
-            // cannot type accented characters through this branch.
-            } else if (key.length() == 1 && key.charAt(0) >= 32 && key.charAt(0) <= 126) {
+            // prijima tisknutelne znaky vcetne ceske diakritiky
+            // ridici znaky do jmena nepatri
+            } else if (key.codePointCount(0, key.length()) == 1
+                    && !Character.isISOControl(key.codePointAt(0))) {
                 input.value += key;
                 if (input.onChange != null) input.onChange.accept(input.value);
             }
             return;
         }
 
-        // Arrow keys choose another widget geometrically. Brackets/Page keys
-        // switch to an adjacent layer only when it contains a visible element.
+        // sipky vybiraji podle polohy prvku
+        // strankovaci klavesy prepinaji sousedni obrazovku jen pokud obsahuje viditelny prvek
         switch (key) {
             case "UP"    -> moveFocus(0, -1);
             case "DOWN"  -> moveFocus(0, 1);
@@ -717,13 +693,13 @@ public class MiniTui {
         }
     }
 
-    // A layer may contain only labels: this checks visibility, not focusability.
+    // obrazovka muze obsahovat jen popisky takze overujeme viditelnost a ne vybiratelnost
     private boolean hasElementsAtZ(int z) {
         return elements.stream().anyMatch(e -> e.z == z && e.visible);
     }
 
-    // Keep valid focus. If a screen change or visibility change invalidates it,
-    // fall back to the first eligible widget in registration order, or null.
+    // pokud aktualni vyber prestal platit vybere se prvni vhodny prvek
+    // pokud zadny neni zustane vyber prazdny
     private void ensureFocusOnCurrentLayer() {
         if (focusedElement != null && focusedElement.z == currentZ
                 && focusedElement.focusable && focusedElement.visible) return;
@@ -733,8 +709,8 @@ public class MiniTui {
                 .orElse(null);
     }
 
-    // dx/dy identify one cardinal direction, such as (0, 1) for down.
-    // Navigation uses widget anchor positions, not widget sizes or tab order.
+    // posun urcuje jeden ze ctyr smeru
+    // vyber pouziva kotevni souradnice a ne rozmery prvku
     private void moveFocus(int dx, int dy) {
         ensureFocusOnCurrentLayer();
         if (focusedElement == null) return;
@@ -748,14 +724,12 @@ public class MiniTui {
             int relX = el.x - focusedElement.x;
             int relY = el.y - focusedElement.y;
 
-            // Reject candidates outside the requested direction. For example,
-            // moving right requires a strictly positive horizontal offset.
+            // kandidati mimo pozadovany smer se preskoci
             if (dx != 0 && Integer.signum(relX) != dx) continue;
             if (dy != 0 && Integer.signum(relY) != dy) continue;
 
-            // Prefer nearby widgets in the requested direction, with a penalty
-            // for sideways deviation. These weights are a layout heuristic;
-            // equal scores keep the earlier widget in registration order.
+            // blizke prvky ve smeru pohybu maji prednost
+            // bocni odchylka zvysuje skore a pri shode zustane drive registrovany prvek
             double primaryDist = (dx != 0) ? Math.abs(relX) : Math.abs(relY);
             double secondaryDist = (dx != 0) ? Math.abs(relY) * 6.0 : Math.abs(relX) * 2.5;
             double score = primaryDist + secondaryDist;
@@ -769,8 +743,7 @@ public class MiniTui {
         if (best != null) focusedElement = best;
     }
 
-    // Build the entire screen in memory, then print once if it has changed.
-    // This redraws a whole frame rather than updating individual changed cells.
+    // cely snimek vznikne v pameti a vytiskne se jednou pokud se zmenil
     private void renderScreen() {
         ensureFocusOnCurrentLayer();
         TerminalGeometry geometry = terminal;
@@ -778,11 +751,11 @@ public class MiniTui {
         int termHeight = geometry.height();
         int footerRow = termHeight - 1;
         StringBuilder sb = new StringBuilder();
-        // Hide cursor, move to home, clear screen. These are only sent when the
-        // completed frame differs from lastFrame; building the string does no I/O.
+        // schovani kurzoru presun na zacatek a smazani obrazovky
+        // sekvence se odeslou az kdyz se hotovy snimek lisi od minuleho
         sb.append("\033[?25l\033[H\033[2J");
 
-        // Top border changes style depending on which UI screen (Z-layer) is active
+        // horni okraj meni barvu podle aktivni obrazovky
         String borderChar = (currentZ == 0) ? "-" : "~";
         String borderColor = (currentZ == 0) ? Color.CYAN : Color.YELLOW;
         String topBorder = borderColor + (termWidth == 1 ? "+"
@@ -793,18 +766,16 @@ public class MiniTui {
             if (el.z != currentZ || !el.visible || el.x >= termWidth || el.y >= footerRow) continue;
             boolean isFocused = (el == focusedElement);
             boolean isEditing = isFocused && editing;
-            // Find the nearest visible widget anchored to the right on the same
-            // row. The same boundary is enforced for every widget's output,
-            // including custom elements and Box's absolute cursor positions.
+            // nejblizsi prvek vpravo na stejnem radku urcuje hranici vykresleni
+            // hranice plati i pro vlastni prvky a absolutni souradnice ramecku
             int renderWidth = renderBoundary(el, termWidth);
             String out = el.render(isFocused, isEditing, renderWidth);
             appendClipped(sb, out, el.x, el.y, renderWidth, footerRow);
         }
 
-        // Never write the bottom-right cell: terminals with automatic wrapping
-        // could scroll the entire frame when that cell is filled.
+        // pravou dolni bunku nechavame prazdnou aby automaticke zalamovani neposunulo obrazovku
         int maxFooterWidth = Math.max(0, termWidth - 1);
-        String zTag = (currentZ == 0) ? " [MAIN UI] " : " [SHOP UI] ";
+        String zTag = (currentZ == 0) ? " [HLAVNÍ] " : " [OBCHOD] ";
         String rawFooter = " " + statusText;
         if (rawFooter.length() + zTag.length() < maxFooterWidth) {
             rawFooter = rawFooter + " ".repeat(maxFooterWidth - rawFooter.length() - zTag.length()) + zTag;
@@ -812,9 +783,9 @@ public class MiniTui {
         appendClipped(sb, Color.apply(rawFooter, Color.REVERSE), 0, footerRow,
                 maxFooterWidth, termHeight);
 
-        // While editing, show the real terminal cursor at the end of the visible
-        // text. The +4 accounts for the input's prefix in zero-based columns.
-        // This assumes characters occupy one terminal column.
+        // pri upravach zobrazime skutecny kurzor za viditelnym koncem textu
+        // ctyri sloupce odpovidaji dekoraci vstupu
+        // predpoklada se jeden sloupec na znak
         if (editing && focusedElement instanceof Input input) {
             int right = renderBoundary(input, termWidth);
             int fieldWidth = Math.max(1, Math.min(input.width, right - input.x - input.label.length() - 7));
@@ -843,9 +814,8 @@ public class MiniTui {
         return width;
     }
 
-    // Interpret cursor movement rather than passing it through unchecked: CUP
-    // below the viewport is clamped by terminals and can overwrite the footer.
-    // Keep SGR styling, clip text in display columns, and discard other controls.
+    // pohyb kurzoru zpracujeme sami aby terminal neprepsal paticku
+    // styly zustavaji ale text se orizne podle zobrazovane sirky a ostatni prikazy se zahodi
     private static void appendClipped(StringBuilder frame, String text, int x, int y,
                                       int right, int bottom) {
         boolean positioned = false;
@@ -909,7 +879,7 @@ public class MiniTui {
         int type = Character.getType(codePoint);
         if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK
                 || type == Character.FORMAT) return 0;
-        // Common wide CJK characters and emoji occupy two terminal cells.
+        // bezne siroke asijske znaky a emoji zabiraji dve bunky
         if (codePoint >= 0x1100 && (codePoint <= 0x115f || codePoint == 0x2329 || codePoint == 0x232a
                 || codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint != 0x303f
                 || codePoint >= 0xac00 && codePoint <= 0xd7a3 || codePoint >= 0xf900 && codePoint <= 0xfaff
@@ -919,8 +889,8 @@ public class MiniTui {
         return 1;
     }
 
-    // UNIX INPUT (Linux, macOS, BSD). Polling /dev/tty lets stop() release the
-    // reader without waiting for a key and needs no internal JDK signal APIs.
+    // ------------------------------------ unixovy vstup ------------------------------------
+    // prubezne cteni terminalu umozni ukoncit vlakno bez cekani na dalsi klavesu
     private void readUnixKeys() throws Exception {
         UnixKeyDecoder decoder = new UnixKeyDecoder(keyQueue::offer);
         long nextSizeCheck = System.nanoTime();
@@ -928,7 +898,7 @@ public class MiniTui {
             while (running) {
                 for (int count = 0; count < 256 && running && in.available() > 0; count++) {
                     int c = in.read();
-                    if (c < 0) throw new EOFException("Terminal input closed");
+                    if (c < 0) throw new EOFException("Vstup terminálu byl uzavřen");
                     decoder.accept(c, System.nanoTime());
                 }
                 long now = System.nanoTime();
@@ -942,16 +912,33 @@ public class MiniTui {
         }
     }
 
-    // Retain incomplete CSI/SS3 sequences across reads, including modified
-    // arrows. Unknown sequences are consumed as a unit, never typed into Input.
+    // neuplne sekvence si pamatujeme mezi ctenimi
+    // nezname sekvence zahodime jako celek aby se nezapsaly do vstupu
     private static final class UnixKeyDecoder {
         private final Consumer<String> keys;
         private final StringBuilder escape = new StringBuilder();
+        private final ByteArrayOutputStream utf8 = new ByteArrayOutputStream();
+        private int remainingBytes;
         private long deadline;
 
         UnixKeyDecoder(Consumer<String> keys) { this.keys = keys; }
 
         void accept(int c, long now) {
+            if (escape.isEmpty() && (remainingBytes > 0 || c >= 128)) {
+                if (remainingBytes > 0 && (c & 0xc0) == 0x80) {
+                    utf8.write(c); // cesky znak muze prijit po jednotlivych bajtech
+                    if (--remainingBytes == 0) {
+                        keys.accept(utf8.toString(StandardCharsets.UTF_8));
+                        utf8.reset();
+                    }
+                    return;
+                }
+                utf8.reset();
+                remainingBytes = c >= 0xc2 && c <= 0xdf ? 1
+                        : c >= 0xe0 && c <= 0xef ? 2 : c >= 0xf0 && c <= 0xf4 ? 3 : 0;
+                if (remainingBytes > 0) utf8.write(c);
+                if (c >= 128) return;
+            }
             if (escape.isEmpty()) {
                 switch (c) {
                     case 27 -> escape.append((char) c);
@@ -997,8 +984,8 @@ public class MiniTui {
         }
     }
 
-    // stty returns "rows columns", so height is read before width.
-    // On failure, keep the last known dimensions (or startup defaults).
+    // prikaz stty vraci nejprve radky a potom sloupce
+    // pri chybe zustane posledni znama velikost
     private void updateUnixTermSize() {
         try {
             String out = execSh("stty size < /dev/tty").trim();
@@ -1013,8 +1000,8 @@ public class MiniTui {
     }
 
     private synchronized void updateTerminalGeometry(int width, int height, int left, int top) {
-        // Minimized consoles can briefly report zero dimensions. Keep the last
-        // usable snapshot rather than producing negative coordinates/repeats.
+        // minimalizovane okno muze docasne hlasit nuly
+        // ponechame posledni platnou velikost
         if (width <= 0 || height <= 0 || left < 0 || top < 0) return;
         TerminalGeometry next = new TerminalGeometry(width, height, left, top);
         if (!next.equals(terminal)) terminal = next;
@@ -1027,17 +1014,17 @@ public class MiniTui {
     private static String runCommand(ProcessBuilder builder, long timeoutMillis) throws IOException, InterruptedException {
         Process process = builder.redirectError(ProcessBuilder.Redirect.DISCARD).start();
         try {
-            if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) throw new IOException("Terminal command timed out");
-            if (process.exitValue() != 0) throw new IOException("Terminal command failed: " + builder.command().get(0));
+            if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) throw new IOException("Vypršel čas na příkaz terminálu");
+            if (process.exitValue() != 0) throw new IOException("Příkaz terminálu selhal: " + builder.command().get(0));
             return new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } finally {
             process.destroyForcibly();
         }
     }
 
-    // WINDOWS INPUT. Query CONOUT$ directly: PowerShell's stdout is a pipe, so
-    // its host/default buffer dimensions need not describe the visible window.
-    // The same bridge works with the classic console and Windows Terminal.
+    // ------------------------------------ vstup windows ------------------------------------
+    // rozmery cteme primo z konzole protoze vystup powershellu je roura
+    // stejny most funguje v klasicke konzoli i ve windows terminalu
     private static final String WINDOWS_CONSOLE_API = """
             $ErrorActionPreference = 'Stop'
             Add-Type -TypeDefinition @'
@@ -1114,14 +1101,14 @@ public class MiniTui {
                 handleWindowsMessage(line);
                 if (line.startsWith("SIZE,")) ready.countDown();
             }
-            if (running) throw new IOException("Windows console reader exited");
+            if (running) throw new IOException("Čtení konzole Windows skončilo");
         } finally {
             process.destroyForcibly();
         }
     }
 
-    // Numeric character codes keep commas, Enter, and Ctrl+C out of the line
-    // protocol itself. Malformed/temporary geometry is ignored safely.
+    // ciselne kody znaku nepletou carky a enter s protokolem
+    // neplatne nebo docasne rozmery se bezpecne ignoruji
     private void handleWindowsMessage(String line) {
         String[] parts = line.split(",", -1);
         try {

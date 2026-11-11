@@ -1,0 +1,118 @@
+shop
+buy 2
+buy 2
+buy 5
+buy 6
+end
+buy 4
+buy 5
+buy 3
+equip 3
+end
+end
+end
+use 2
+end
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+use 2
+end
+attack
+use 1
+use 2
+use 3
+end
+log
+quit

@@ -5,65 +5,54 @@ public class Inventory {
 
     // ------------------------------------ inicializace ------------------------------------
 
-    private final List<Item> items;
+    private final List<Item> items = new ArrayList<>();
     private int capacity;
     private Item equippedArmor;
     private Item equippedTrinket;
 
     public Inventory() {
-        this(5);
+        this(GameRules.INVENTORY_CAPACITY);
     }
 
     public Inventory(int capacity) {
-        if (capacity < 0) {
-            throw new IllegalArgumentException("Kapacita inventáře nemůže být záporná");
-        }
-        this.items = new ArrayList<>();
+        if (capacity < 0) throw new IllegalArgumentException("Kapacita nesmí být záporná.");
         this.capacity = capacity;
     }
 
-    // ------------------------------------ gettery ------------------------------------
+    // ------------------------------------ obsah inventare ------------------------------------
 
-    public List<Item> getItems() {
-        return List.copyOf(items);
-    }
+    public List<Item> getItems() { return List.copyOf(items); }
+    public int getItemCount() { return items.size(); }
+    public int getCapacity() { return capacity + capacityBonus(equippedTrinket); }
+    public Item getEquippedArmor() { return equippedArmor; }
+    public Item getEquippedTrinket() { return equippedTrinket; }
 
-    public int getCapacity() {
-        return capacity;
+    private int capacityBonus(Item item) {
+        return item != null && item.getPassive() == Item.Passive.CAPACITY ? item.getPower() : 0;
     }
 
     public boolean add(Item item) {
-        if (item == null || items.size() >= capacity) {
-            return false;
-        }
-        items.add(item);
+        if (item == null || items.contains(item) || items.size() >= getCapacity()) return false;
+        items.add(item); // kazdy fyzicky kus muze byt ulozen pouze jednou
         return true;
     }
 
-    // ------------------------------------ upravy inventare ------------------------------------
+    public boolean canRemove(Item item) {
+        if (!items.contains(item)) return false;
+        int remainingCapacity = item == equippedTrinket ? capacity : getCapacity();
+        return items.size() - 1 <= remainingCapacity; // pri prodeji vaku nesmime ztratit ostatni veci
+    }
 
     public boolean remove(Item item) {
-        boolean removed = items.remove(item);
-        if (removed) {
-            if (item == equippedArmor) {
-                equippedArmor = null;
-            }
-            if (item == equippedTrinket) {
-                equippedTrinket = null;
-            }
-        }
-        return removed;
+        if (!canRemove(item)) return false;
+        items.remove(item);
+        if (item == equippedArmor) equippedArmor = null;
+        if (item == equippedTrinket) equippedTrinket = null;
+        return true;
     }
-
-    public int getItemCount() {
-        return items.size();
-    }
-
 
     public boolean setCapacity(int newCapacity) {
-        if (newCapacity < 0 || newCapacity < items.size()) {
-            return false;
-        }
+        if (newCapacity < 0 || newCapacity + capacityBonus(equippedTrinket) < items.size()) return false;
         capacity = newCapacity;
         return true;
     }
@@ -76,32 +65,23 @@ public class Inventory {
 
     // ------------------------------------ vybaveni ------------------------------------
 
-    public Item getEquippedArmor() {
-        return equippedArmor;
-    }
-
-    public Item getEquippedTrinket() {
-        return equippedTrinket;
-    }
-
     public boolean equipArmor(Item item) {
-        if (item == null || item.getItemType() != ItemType.ARMOR || !items.contains(item)) {
-            return false;
-        }
-        equippedArmor = item;
+        if (item != null && (item.getItemType() != ItemType.ARMOR || !items.contains(item))) return false;
+        equippedArmor = item; // null znamena sundani bez vyhozeni z inventare
         return true;
     }
 
     public boolean equipTrinket(Item item) {
-        if (item == null || item.getItemType() != ItemType.TRINKET || !items.contains(item)) {
-            return false;
-        }
+        if (item != null && (item.getItemType() != ItemType.TRINKET || !items.contains(item))) return false;
+        if (items.size() > capacity + capacityBonus(item)) return false;
         equippedTrinket = item;
         return true;
     }
 
-    @Override
-    public String toString() {
-        return items.toString();
+    public boolean isEquipped(Item item) {
+        return item != null && (item == equippedArmor || item == equippedTrinket);
     }
+
+    @Override
+    public String toString() { return items.toString(); }
 }

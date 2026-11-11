@@ -1,0 +1,48 @@
+shop
+buy 3
+buy 3
+buy 6
+end
+buy 10
+buy 7
+equip 2
+end
+end
+end
+end
+use 3
+end
+attack
+use 1
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+end
+attack
+use 1
+use 2
+use 3
+end
+attack
+use 1
+end
+attack
+use 1
+use 2
+use 3
+end
+state
+quit

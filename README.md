@@ -1,52 +1,99 @@
-# Duel – jednoduchá hra pro dva
+# Duel pro dva
 
-Lokální tahová hra 1v1 pro dva hráče u jedné klávesnice. Cílem je snížit zdraví soupeře na nulu. Síťový multiplayer zde není.
+Lokální tahová hra pro dva hráče u jedné klávesnice. Vyhrává první hráč se třemi vítěznými souboji. Rozhraní i popisy předmětů jsou v češtině.
 
-## Spuštění a ovládání
+## Spuštění
 
-Spusťte `Main` v editoru, nebo použijte JDK 17 či novější:
-
-```bash
-javac -encoding UTF-8 -d out src/*.java
-java -cp out Main
-```
-
-Zadejte jména hráčů; prázdný vstup použije Pepu a Mahulenu. Každý začíná se 4 životy, 10 zlatými a inventářem na 5 předmětů.
-
-- Celá hra běží uvnitř `MiniTui`. Šipkami vybíráte prvky, Enter potvrdí tlačítko nebo zahájí/ukončí úpravu jména.
-- Po zadání jmen nakupuje první hráč, poté druhý. Tlačítko „Připraven“ ukončí nákup hráče.
-- Lektvar stojí 3 zlata, meč 5 a štít 4. Neúspěšný nákup nemění inventář ani zlato.
-- Útok způsobí náhodně 1 nebo 2 poškození. Meč přidá 1, soupeřův štít odečte 1; stejné vybavení se nesčítá.
-- Obrana sníží poškození o další 1, do začátku dalšího vlastního tahu. Poškození nikdy není záporné.
-- Lektvar z inventáře obnoví až 2 životy, nejvýše do maxima 4, a spotřebuje se.
-- Hru ukončíte tlačítkem „Konec“ nebo Ctrl+C.
-
-`MiniTui` automaticky sleduje velikost terminálu na Linuxu, macOS a BSD i velikost a posun viditelné oblasti konzole ve Windows. Při zmenšení ořízne obsah, přesune stavový řádek ke spodnímu okraji a po zvětšení obsah znovu vykreslí. Souřadnice prvků, rozepsaný vstup a výběr zůstávají zachovány; použití API se nemění. Ve Windows používá systémový Windows PowerShell, na unixových systémech `stty` a `/dev/tty`.
-
-Po platné akci se hráči vystřídají. Nedostupné léčení tah nespotřebuje. Hráč s nulovým zdravím prohrává; vítěz získá 1 zlato. Opakovaná obrana může zápas prodlužovat – limit tahů zatím není.
-
-## Rozdělení odpovědností
-
-- `Main` propojuje objekty a řídí celou hru: zadání jmen, nakupování, tahy, boj, obranu, použití lektvaru i vítězství. Zajišťuje také tlačítka a aktualizaci obrazovky.
-- `Player` uchovává jméno, zdraví, zlato a inventář. Poskytuje malé metody pro změny vlastního stavu; neřídí souboj ani nabídku obchodu.
-- `Shop` obsahuje katalog předmětů a cen. `Main` z katalogu vytváří nákupní tlačítka. Nabídka je neomezená; nákup předmět z katalogu neodebírá.
-- `Item` je neměnný předmět se jménem a typem; `ItemType` určuje druh předmětu. Aktivní hra používá lektvar, meč a štít. Brnění a luk zatím nemají herní efekt.
-- `ItemCollection` spravuje omezené pole předmětů. Nezná ceny ani zlato.
-- `MiniTui` zajišťuje terminálové rozhraní, vstup z klávesnice a obnovování obrazovky.
-
-`player.addToInventory(item)` přidá předmět bez platby, například jako kořist nebo odměnu. `player.buy(item, price)` nejprve ověří cenu, zůstatek a možnost přidání; při úspěchu přidá předmět a odečte cenu. Vrací `true` při úspěchu, jinak `false` bez změny stavu. Samotné odebrání předmětu z inventáře také nemění zlato.
-
-Původní nákupní metody a kostkový souboj byly z `Player` odstraněny. Demo `MyApp` a jeho samostatná ekonomika byly odstraněny. `Hra.java` zůstává starší ukázkou výpisu hráčů; aktivní hra ji nepoužívá. Původní podklady jsou v `origin/`.
-
-## Ověření nákupů
-
-Jednoduchý test bez dalších knihoven ověřuje přidávání bez platby, úspěšný nákup a odmítnutí nákupu bez vedlejších změn:
+Použij JDK 17 nebo novější a skutečný interaktivní terminál, alespoň 60 × 24 znaků. Doporučená šířka je 100 znaků, aby byly přehledně vidět statistiky obou hráčů.
 
 ```bash
-javac -encoding UTF-8 -d out src/*.java tests/*.java
-java -cp out PlayerPurchaseTest
+javac -encoding UTF-8 -d build/check src/*.java
+java -cp build/check Main
 ```
 
-Regresní test terminálu používá stejný překlad a spouští se příkazem `java -cp out MiniTuiTerminalTest`. Ověřuje ořezání malých oken, změny velikosti a posun viditelné oblasti i šipky na obou platformách. Na Linuxu navíc používá `script` pro skutečný pseudoterminál a kontroluje změny velikosti bez stisku klávesy, ukončení, opětovné spuštění a obnovení nastavení terminálu.
+Šipky vybírají prvek, Enter potvrdí tlačítko nebo zahájí a ukončí úpravu jména. Ctrl+C hru ukončí. Českou diakritiku lze používat i ve jménech. Zmenšení okna pod minimální rozměry pozastaví ovládání; po zvětšení lze pokračovat. Hra se neukládá po ukončení programu.
 
-Podrobné porovnání s původní verzí a přehled dalších kroků najdete v [příručce změn](PRIRUCKA_ZMEN.txt).
+## Průběh zápasu
+
+1. Zadejte jména a potvrďte připravenost. Hra vylosuje prvního nakupujícího; druhý nakupující začne souboj.
+2. Každý začíná s **15 zlatými**, **40 životy**, **12 výdrže** a inventářem na **10 předmětů**.
+3. Obchod obsahuje **10 různých společných nabídek**, vybraných ze **76 předmětů**. Každá má vlastní rozsah počtu kusů a mírnou váhu podle vzácnosti. Menší terminál nabídku rozdělí do stránek.
+4. Kliknutí na nabídku otevře popis a možnost nákupu. Inventář umožňuje přečíst popis, vybavit zbroj či talisman a prodat předmět. Prodej vrací polovinu ceny **zaokrouhlenou dolů**; předmět zmizí a nevrací se do obchodu.
+5. „Pokračovat“ předá obchod druhému hráči. Teprve dvě návštěvy za sebou bez úspěšného nákupu nebo prodeje zahájí boj. Dosavadní nákupy, zlato ani sklad se při předání neresetují.
+6. Oba hráči mají nejprve jeden vlastní přípravný tah bez útoků. Mohou použít štíty, léčení a lektvary výdrže.
+7. Poté hráč používá akce do vyčerpání výdrže nebo podle svého rozhodnutí. Akce se provádějí ihned. Tlačítkem „Ukončit tah“ předá hru soupeři. Stavy, vybavení a časované účinky obou hráčů jsou veřejné.
+8. Smrt okamžitě ukončí souboj. Vítěz dostane **6 zlata**, poražený **9**. Do dalšího souboje zůstávají peníze a předměty; zdraví, výdrž a bojové účinky se resetují. Pořadí obchodu a boje se obrátí bez ohledu na vítěze.
+
+## Bojová pravidla
+
+- Výdrž se obnovuje na začátku vlastního tahu. Těžká zbroj může snížit její základ. Bonus z lektvaru se přidá příští vlastní tah a může překročit maximum, například na 14/12.
+- Každý kus zbraně a štítu lze použít jednou za vlastní tah. Více samostatných kusů lze použít zvlášť. Lektvary léčení a výdrže se spotřebují. Základní útok je zdarma, jednou za tah, za 3 fyzického poškození.
+- Na začátku tahu působí nejprve vybavený talisman, potom časované účinky v pořadí vzniku. Léčení vytvořené před jedem tedy působí dříve. Pokud ale dřívější účinek hráče zabije, pozdější léčení už nepomůže.
+- Fyzické poškození působí okamžitě. Jed působí postupně; každá aplikace má vlastní časovač. Oheň se sloučí do jediného účinku: sečte zbývající poškození a ponechá delší zbývající trvání.
+- Dávka časovaného účinku je zbývající celková hodnota dělená zbývajícím počtem tahů, zaokrouhlená na nejbližší celé číslo. Poloviny se zaokrouhlují nahoru. Skutečná dávka se odečte ze zbytku, takže se zachová celkový účinek. Například 15 poškození na čtyři tahy: **4, 4, 4, 3**.
+- Zbroj snižuje určitý typ poškození procentem nebo odečítá pevnou hodnotu při splnění prahu. Prahová zbroj vždy propustí alespoň polovinu zásahu zaokrouhlenou na nejbližší celé číslo; aktivní štít může pohltit i tento zbytek. Pak se uplatní aktivní štít. Štít má společnou zásobu pro všechny typy poškození, platí ihned a zanikne po úvodních účincích příštího vlastního tahu.
+- Léčení s trváním jeden tah působí ihned. Delší léčení začne na začátku příštího vlastního tahu a nikdy nepřekročí maximum života.
+- Lze vybavit jednu zbroj a jeden talisman, pouze v obchodě. Vybavené předměty stále zabírají místo v inventáři. Talisman může léčit, čistit jed či oheň, přidávat výdrž, posílit fyzické útoky nebo rozšířit inventář. Před sundáním či prodejem brašny se musí zbývající obsah vejít.
+
+Očistné talismany odstraní před působením účinků nejvýše 3 zbývajícího poškození příslušného typu za vlastní tah. U jedu se tento rozpočet rozdělí od nejstaršího účinku; nejde o imunitu. Zbraně do 7 zlata mají trojnásobnou váhu při losování obchodu. Žádná nabídka ani kategorie není zaručena.
+
+Čísla jsou výchozí pro další hraní a ladění. Nejde o finálně vyváženou ekonomiku. Obecná nastavení jsou v `src/GameRules.java`; jednotlivé ceny, síly, náklady, zásoby a popisy v `src/ItemCatalog.java`. Hra zatím nemá limit tahů ani automatické řešení patové situace.
+
+## Struktura kódu
+
+| Soubor | Odpovědnost |
+|---|---|
+| `Main.java` | Jména, obrazovky, tlačítka, stránkování a propojení s hrou |
+| `Game.java` | Fáze zápasu, pořadí hráčů, akce, pasivní účinky, vítězství a odměny |
+| `GameRules.java` | Výchozí hodnoty pro snadné ladění |
+| `Player.java` | Stav hráče, historie akcí v tahu, výdrž, účinky a příjem poškození |
+| `Inventory.java` | Vlastněné kusy, kapacita a odkazy na vybavení |
+| `Damage.java` | Zbývající celkový účinek, časovač, zaokrouhlení a slučování ohně |
+| `Item.java`, `ItemType.java`, `Rarity.java` | Neměnné vlastnosti předmětů a jejich druhy |
+| `ItemCatalog.java` | 76 předmětů a jejich české popisy |
+| `Shop.java` | Náhodná nabídka, zásoby, nákup a prodej |
+| `MiniTui.java` | Terminál, vykreslování, klávesnice a změny velikosti |
+| `Test.java` | Samostatná ukázka rozhraní; není hlavní hra |
+
+Podrobný anglický průvodce změnami, rozhodnutími a důvody je v `.leave/progress.txt`. Adresář `.leave` je podle stávajícího `.gitignore` lokální a nesleduje se v Gitu.
+
+## Ověření
+
+Testy nevyžadují externí knihovny:
+
+```bash
+javac --release 17 -encoding UTF-8 -d build/check src/*.java tests/*.java
+java -cp build/check DamageTest
+java -cp build/check GameTest
+java -cp build/check MainUiTest
+java -cp build/check TerminalInputTest
+java -cp build/check BalanceRegressionTest
+```
+
+Na Linuxu lze navíc spustit skutečnou terminálovou zkoušku přes Python 3:
+
+```bash
+python3 tests/terminal_smoke.py
+```
+
+Volitelný první argument je cesta k programu `java`. Zkouška projde zadání jména s diakritikou, obchod, přípravu, útok a ukončení. Terminálový záznam uloží do `build/terminal-smoke.txt`.
+
+## Textová verze a opakovatelné hraní
+
+`Playtest` nabízí stejného hráče, obchod a bojový model přes řádkové příkazy. Používá stejná pravidla jako `Main`, nikoli zjednodušenou kopii. Výchozí jména v obou verzích jsou Hráč 1 a Hráč 2.
+
+```bash
+java -cp build/check Playtest 17
+```
+
+Číslo je semínko náhody, takže stejné příkazy vytvoří stejný průběh. `shop` otevře obchod, `buy N` koupí nabídku, `equip N` vybaví vlastní předmět, `use N` ho použije a `attack` provede základní útok. `end` předá obchod nebo ukončí bojový tah. `next` pokračuje po výsledku, `log` vypíše historii a `quit` skončí. `offer N` a `item N` zobrazí popis. Po spotřebování nebo prodeji se čísla vlastních předmětů posunou podle aktuálního výpisu.
+
+Automatický zátěžový test odehraje pevné souboje i náhodné zápasy:
+
+```bash
+java -cp build/check BalanceSimulation 1000 10000 balanced
+java -cp build/check BalanceSimulation 1000 10000 defensive
+java -cp build/check BalanceSimulation 1000 10000 aggressive
+```
+
+Argumenty určují počet zápasů, posun semínek a strategii. Limit 160 tahů je pouze pojistka testu, nikoli pravidlo hry. Strategie jsou jednoduché heuristiky; výsledky nejsou důkazem optimálního hraní. Výsledky první úpravy vyvážení a její omezení popisuje [zpráva z hraní](playtests/balance-report.md).
