@@ -1,7 +1,8 @@
 public enum ItemType {
-    SWORD,
-    POTION,
-    SHIELD,
-    ARMOR,
-    BOW
+    DAMAGE,
+    HEAL,
+    DEFEND,
+    STAMINA,
+    HA,
+    LA
 }

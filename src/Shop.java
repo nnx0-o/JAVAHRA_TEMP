@@ -9,9 +9,6 @@ public class Shop {
     private final Map<Item, Integer> prices = new LinkedHashMap<>();
     
     public Shop() {
-        addItem(new Item(ItemType.POTION, "Lektvar"), 3, 3);
-        addItem(new Item(ItemType.SWORD, "Meč"), 5, 5);
-        addItem(new Item(ItemType.SHIELD, "Štít"), 4, 4);
     }
 
     // ------------------------------------ gettery ------------------------------------
@@ -24,8 +21,6 @@ public class Shop {
     public int getPrice(Item item) {
         return prices.getOrDefault(item, -1);
     }
-
-
 
     public boolean addItem(Item item, int price, int quantity) {
         if (item == null || price < 0 || quantity < 0) {

@@ -18,6 +18,125 @@ import java.util.function.Consumer;
  */
 public class MiniTui {
 
+    /**
+     * Composable ANSI colors and text styles. Values are strings, so they work
+     * with the existing Title and Box color arguments and with custom elements.
+     * For example: Color.combine(Color.BOLD, Color.WHITE, Color.BG_BLUE).
+     * Effects and extended colors depend on the terminal's capabilities.
+     */
+    public static final class Color {
+        private Color() {}
+
+        public static final String RESET = "\033[0m";
+
+        // Foreground colors, including the terminal's configured default.
+        public static final String BLACK = "\033[30m";
+        public static final String RED = "\033[31m";
+        public static final String GREEN = "\033[32m";
+        public static final String YELLOW = "\033[33m";
+        public static final String BLUE = "\033[34m";
+        public static final String MAGENTA = "\033[35m";
+        public static final String CYAN = "\033[36m";
+        public static final String WHITE = "\033[37m";
+        public static final String BRIGHT_BLACK = "\033[90m";
+        public static final String BRIGHT_RED = "\033[91m";
+        public static final String BRIGHT_GREEN = "\033[92m";
+        public static final String BRIGHT_YELLOW = "\033[93m";
+        public static final String BRIGHT_BLUE = "\033[94m";
+        public static final String BRIGHT_MAGENTA = "\033[95m";
+        public static final String BRIGHT_CYAN = "\033[96m";
+        public static final String BRIGHT_WHITE = "\033[97m";
+        public static final String DEFAULT = "\033[39m";
+
+        // Background colors can be combined with any foreground and styles.
+        public static final String BG_BLACK = "\033[40m";
+        public static final String BG_RED = "\033[41m";
+        public static final String BG_GREEN = "\033[42m";
+        public static final String BG_YELLOW = "\033[43m";
+        public static final String BG_BLUE = "\033[44m";
+        public static final String BG_MAGENTA = "\033[45m";
+        public static final String BG_CYAN = "\033[46m";
+        public static final String BG_WHITE = "\033[47m";
+        public static final String BG_BRIGHT_BLACK = "\033[100m";
+        public static final String BG_BRIGHT_RED = "\033[101m";
+        public static final String BG_BRIGHT_GREEN = "\033[102m";
+        public static final String BG_BRIGHT_YELLOW = "\033[103m";
+        public static final String BG_BRIGHT_BLUE = "\033[104m";
+        public static final String BG_BRIGHT_MAGENTA = "\033[105m";
+        public static final String BG_BRIGHT_CYAN = "\033[106m";
+        public static final String BG_BRIGHT_WHITE = "\033[107m";
+        public static final String BG_DEFAULT = "\033[49m";
+
+        public static final String BOLD = "\033[1m";
+        public static final String DIM = "\033[2m";
+        public static final String ITALIC = "\033[3m";
+        public static final String UNDERLINE = "\033[4m";
+        public static final String BLINK = "\033[5m";
+        public static final String RAPID_BLINK = "\033[6m";
+        public static final String REVERSE = "\033[7m";
+        public static final String HIDDEN = "\033[8m";
+        public static final String STRIKETHROUGH = "\033[9m";
+        public static final String DOUBLE_UNDERLINE = "\033[21m";
+        public static final String OVERLINE = "\033[53m";
+
+        /**
+         * Combines codes in order without resetting between them. Any number of
+         * styles can accompany a foreground/background pair; for conflicting
+         * codes the terminal applies the last one. No codes returns an empty string.
+         */
+        public static String combine(String... codes) {
+            StringBuilder result = new StringBuilder();
+            for (String code : codes) result.append(Objects.requireNonNull(code, "code"));
+            return result.toString();
+        }
+
+        /** Wraps text with the supplied codes and resets all styling afterwards. */
+        public static String apply(String text, String... codes) {
+            return combine(codes) + Objects.requireNonNull(text, "text") + RESET;
+        }
+
+        /** Selects a foreground from the terminal's 256-color palette (0-255). */
+        public static String foreground(int index) {
+            return sgr(38, 5, channel(index));
+        }
+
+        /** Selects a background from the terminal's 256-color palette (0-255). */
+        public static String background(int index) {
+            return sgr(48, 5, channel(index));
+        }
+
+        /** Selects a true-color foreground; each RGB component must be 0-255. */
+        public static String foreground(int red, int green, int blue) {
+            return sgr(38, 2, channel(red), channel(green), channel(blue));
+        }
+
+        /** Selects a true-color background; each RGB component must be 0-255. */
+        public static String background(int red, int green, int blue) {
+            return sgr(48, 2, channel(red), channel(green), channel(blue));
+        }
+
+        /**
+         * Builds any numeric SGR sequence, including styles without named
+         * constants. For example, sgr(22) turns off bold/dim. No parameters resets.
+         */
+        public static String sgr(int... parameters) {
+            if (parameters.length == 0) return RESET;
+            StringJoiner result = new StringJoiner(";", "\033[", "m");
+            for (int parameter : parameters) {
+                if (parameter < 0) throw new IllegalArgumentException("SGR parameters must be non-negative");
+                result.add(Integer.toString(parameter));
+            }
+            return result.toString();
+        }
+
+        private static int channel(int value) {
+            if (value < 0 || value > 255) {
+                throw new IllegalArgumentException("Color index or RGB component must be between 0 and 255: " + value);
+            }
+            return value;
+        }
+    }
+
     // WIDGETS
     // Nested static classes can be created as new MiniTui.Button(...), without
     // first needing an enclosing MiniTui instance. add() registers them later.
@@ -82,7 +201,7 @@ public class MiniTui {
         private volatile String colorCode;
 
         public Title(int x, int y, int z, String text) {
-            this(x, y, z, text, "\033[1;36m");
+            this(x, y, z, text, Color.combine(Color.BOLD, Color.CYAN));
         }
 
         public Title(int x, int y, int z, String text, String ansiColor) {
@@ -115,7 +234,7 @@ public class MiniTui {
             String pad = "=".repeat(padLen);
             String line = pad + " " + cleanText + " " + pad;
             while (line.length() < barWidth) line += "=";
-            return colorCode + line + "\033[0m";
+            return colorCode + line + Color.RESET;
         }
     }
 
@@ -180,7 +299,7 @@ public class MiniTui {
 
             // Bottom border
             String bot = "+" + "-".repeat(Math.max(0, w - 2)) + "+";
-            sb.append(String.format("\033[%d;%dH%s\033[0m", y + height, x + 1, bot));
+            sb.append(String.format("\033[%d;%dH%s", y + height, x + 1, bot)).append(Color.RESET);
             return sb.toString();
         }
     }
@@ -281,9 +400,9 @@ public class MiniTui {
                     : String.format("%-" + fieldWidth + "s", value);
 
             if (editing) {
-                return " " + label + ": \033[43;30m[" + displayVal + "]\033[0m ";
+                return " " + label + ": " + Color.apply("[" + displayVal + "]", Color.BG_YELLOW, Color.BLACK) + " ";
             } else if (focused) {
-                return "\033[7;36m " + label + ": [" + displayVal + "] \033[0m";
+                return Color.apply(" " + label + ": [" + displayVal + "] ", Color.REVERSE, Color.CYAN);
             } else {
                 return " " + label + ": [" + displayVal + "] ";
             }
@@ -319,7 +438,7 @@ public class MiniTui {
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
             if (focused) {
-                return "\033[7;32m < " + text + " > \033[0m";
+                return Color.apply(" < " + text + " > ", Color.REVERSE, Color.GREEN);
             }
             return " [ " + text + " ] ";
         }
@@ -665,9 +784,9 @@ public class MiniTui {
 
         // Top border changes style depending on which UI screen (Z-layer) is active
         String borderChar = (currentZ == 0) ? "-" : "~";
-        String borderColor = (currentZ == 0) ? "\033[36m" : "\033[33m";
+        String borderColor = (currentZ == 0) ? Color.CYAN : Color.YELLOW;
         String topBorder = borderColor + (termWidth == 1 ? "+"
-                : "+" + borderChar.repeat(termWidth - 2) + "+") + "\033[0m";
+                : "+" + borderChar.repeat(termWidth - 2) + "+") + Color.RESET;
         if (footerRow > 0) appendClipped(sb, topBorder, 0, 0, termWidth, footerRow);
 
         for (Element el : elements) {
@@ -690,7 +809,7 @@ public class MiniTui {
         if (rawFooter.length() + zTag.length() < maxFooterWidth) {
             rawFooter = rawFooter + " ".repeat(maxFooterWidth - rawFooter.length() - zTag.length()) + zTag;
         }
-        appendClipped(sb, "\033[7m" + rawFooter + "\033[0m", 0, footerRow,
+        appendClipped(sb, Color.apply(rawFooter, Color.REVERSE), 0, footerRow,
                 maxFooterWidth, termHeight);
 
         // While editing, show the real terminal cursor at the end of the visible
@@ -774,7 +893,7 @@ public class MiniTui {
             }
             x += columns;
         }
-        frame.append("\033[0m");
+        frame.append(Color.RESET);
     }
 
     private static int ansiParameter(String[] parts, int index) {

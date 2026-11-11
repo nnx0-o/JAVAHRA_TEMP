@@ -11,6 +11,8 @@ public class Player {
     private int gold;
     private final List<Item> inventory;
     private int inventorySize;
+    private Item equippedHA;
+    private Item equippedLA;
 
     public Player(String name) {
         this.name = name;
