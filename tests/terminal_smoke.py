@@ -13,7 +13,7 @@ java = sys.argv[1] if len(sys.argv) > 1 else "java"
 pid, terminal = pty.fork()
 if pid == 0:
     os.execvp(java, [java, "-cp", "build/check", "Main"])
-fcntl.ioctl(terminal, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
+fcntl.ioctl(terminal, termios.TIOCSWINSZ, struct.pack("HHHH", 42, 140, 0, 0))
 output = bytearray()
 
 
@@ -37,17 +37,20 @@ def send(keys, expected):
 
 
 try:
-    wait_for("Připraveni")
-    send("\rŽaneta\r".encode(), "Žaneta")
-    send(b"\x1b[B\x1b[B\r", "První v obchodě")
-    send(b"\r", "Společná nabídka")
-    # pri vysce 24 je sedm nabidek a pak strankovani inventar a pokracovani
-    send(b"\x1b[B" * 9 + b"\r", "Beze změny: 1/2")
-    send(b"\x1b[B" * 9 + b"\r", "Přípravný tah")
-    # pet tlacitek oddeluje zakladni utok od konce tahu
-    send(b"\x1b[B" * 4 + b"\r", "Přípravný tah")
-    send(b"\x1b[B" * 4 + b"\r", "Bojový tah 3")
-    send(b"\r", "základní útok")
+    wait_for("Duel 1V1")
+    send(b"\r", "Jména hráčů")
+    send(b"\r" + b"\x7f" * 6 + "Žaneta\r".encode(), "Žaneta")
+    send(b"\x1b[B\x1b[B\r", "Obchod:")
+    send(b"\x1b[B" * 10 + b"\r", "Zahájit souboj")
+    send(b"\x1b[B" * 10 + b"\r", "Příprava")
+    send(b"\x1b[B\r", "Příprava")
+    send(b"\x1b[B\r", "Kolo 1 (1/2)")
+    start = len(output)
+    send(b"\r", "Přidáno do plánu: Pěst")
+    assert b"37 / 40" not in output[start:], "attack resolved before End turn"
+    send(b"h", "Začni tady")
+    send(b"\x1b", "Plán")
+    send(b"\x1b[B" * 3 + b"\r", "37 / 40")
     os.write(terminal, b"\x03")
     deadline = time.monotonic() + 5
     status = None
@@ -65,8 +68,9 @@ try:
     assert b"\x1b[?1049l" in output, "alternate screen was not restored"
     assert b"Exception" not in output, "unexpected exception in terminal"
     Path("build/terminal-smoke.txt").write_bytes(output)
-    print("terminal_smoke: OK (naming, Czech input, shop, preparation, attack, exit)")
+    print("terminal_smoke: OK (welcome, Czech names, shop, preparation, queued attack, help return, resolution, exit)")
 finally:
+    Path("build/terminal-smoke.txt").write_bytes(output)
     try:
         os.kill(pid, 9)
         os.waitpid(pid, 0)

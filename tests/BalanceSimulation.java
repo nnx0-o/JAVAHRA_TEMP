@@ -123,7 +123,7 @@ public class BalanceSimulation {
         boolean shield = actor.getInventory().stream().anyMatch(i -> i.getItemType() == ItemType.DEFEND);
         return policyWeight(item.getItemType()) * switch (item.getItemType()) {
             case DAMAGE -> weaponCost + item.getStaminaCost() <= actor.getMaxStamina() - (shield ? 3 : 0)
-                    ? item.getPower() * (item.getDamageType() == Damage.DamageType.PHYSICAL ? 1 : 0.8) : 0;
+                    ? item.getTotalPower() * (item.getDamageType() == Damage.DamageType.PHYSICAL ? 1 : 0.8) : 0;
             case DEFEND -> !shield && weaponCost <= 9 ? item.getPower() * 0.8 : 0;
             case ARMOR -> actor.getEquipment().getEquippedArmor() == null ? 3 : 0;
             case TRINKET -> actor.getEquipment().getEquippedTrinket() == null ? 3 : 0;
@@ -154,9 +154,9 @@ public class BalanceSimulation {
 
     private static double actionValue(Player actor, Item item, boolean preparation) {
         return policyWeight(item.getItemType()) * switch (item.getItemType()) {
-            case DAMAGE -> preparation ? 0 : item.getPower() * (item.getDamageType() == Damage.DamageType.PHYSICAL ? 1 : 0.8);
+            case DAMAGE -> preparation ? 0 : item.getTotalPower() * (item.getDamageType() == Damage.DamageType.PHYSICAL ? 1 : 0.8);
             case DEFEND -> item.getPower();
-            case HEAL -> actor.getHealth() <= Player.MAX_HEALTH - item.getPower() ? item.getPower() * 1.1 : 0;
+            case HEAL -> actor.getHealth() <= Player.MAX_HEALTH - item.getTotalPower() ? item.getTotalPower() * 1.1 : 0;
             case STAMINA -> preparation ? item.getPower() : 0;
             default -> 0;
         };

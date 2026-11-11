@@ -94,9 +94,25 @@ public class Player {
     }
 
     public void recordAction(Action action) {
-        actions.add(action); // historie tahu zustava viditelna ale akce se uz neopakuje
+        actions.add(action); // akce ceka na konec tahu
         if (action.basicAttack()) basicAttackUsed = true;
         else usedItems.add(action.item());
+    }
+
+    public boolean replacePlan(List<Action> plan, int previousCost, int nextCost) {
+        // rezervace se meni atomicky a odstranene akce vraceji vydrz
+        int budget = stamina + previousCost;
+        if (nextCost < 0 || nextCost > budget) return false;
+        stamina = budget - nextCost;
+        actions.clear();
+        actions.addAll(plan);
+        usedItems.clear();
+        basicAttackUsed = false;
+        for (Action action : plan) {
+            if (action.basicAttack()) basicAttackUsed = true;
+            else usedItems.add(action.item());
+        }
+        return true;
     }
 
     // ------------------------------------ stavy a obrana ------------------------------------

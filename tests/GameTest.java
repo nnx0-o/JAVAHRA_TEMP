@@ -113,30 +113,35 @@ public class GameTest {
         check(first.getStamina() == 12 && second.getEffects().isEmpty(), "preparation rejects hostile item without payment");
         Item potion = add(first, "Doušek síly");
         game.act(Player.Action.use(potion));
-        check(first.getStamina() == 9 && first.getNextStamina() == 3 && !first.getInventory().contains(potion), "delayed stamina");
+        check(first.getStamina() == 9 && first.getNextStamina() == 0 && first.getInventory().contains(potion),
+                "delayed stamina potion reserves cost without consuming or resolving");
         game.endTurn();
+        check(first.getNextStamina() == 3 && !first.getInventory().contains(potion), "stamina potion resolves at end turn");
         check(game.isPreparation() && game.getCurrentPlayer() == second, "second preparation turn");
         game.endTurn();
         check(!game.isPreparation() && first.getStamina() == 15, "stamina exceeds cap for next turn");
         game.act(Player.Action.attack());
-        game.act(Player.Action.attack());
-        check(second.getHealth() == 37, "basic attack once per turn");
+        check(second.getHealth() == 40 && first.getStamina() == 15 - GameRules.BASIC_STAMINA_COST,
+                "basic attack reserves stamina without immediate damage");
         game.act(Player.Action.use(fire));
-        game.act(Player.Action.use(fire));
-        check(second.getEffects().size() == 1 && first.getStamina() == 13, "weapon once per copy");
-        check(first.getActions().size() == 2, "actions recorded once");
+        check(second.getEffects().isEmpty() && first.getActions().size() == 2, "weapon is queued without applying status");
         Item fireCopy = add(first, "Pochodeň");
         game.act(Player.Action.use(fireCopy));
-        check(second.getEffects().get(0).getAmount() == 14, "distinct weapons can both be used");
-        Item hammer = add(first, "Těžké kladivo");
-        game.act(Player.Action.use(hammer));
+        check(first.getActions().size() == 3, "distinct weapon copies can be queued");
+        Item thirdFireCopy = add(first, "Pochodeň");
+        game.act(Player.Action.use(thirdFireCopy));
         Item sword = add(first, "Obouruční meč");
         int before = second.getHealth();
+        int stamina = first.getStamina();
         game.act(Player.Action.use(sword));
-        check(second.getHealth() == before && !first.hasUsed(sword), "insufficient stamina has no effect");
+        check(second.getHealth() == before && !first.hasUsed(sword) && first.getStamina() == stamina,
+                "insufficient stamina leaves plan and states unchanged");
         game.endTurn();
+        check(second.getHealth() == 31 && second.getEffects().size() == 1,
+                "basic attack resolves then merged fire ticks at opponent turn start");
+        check(second.getEffects().get(0).getAmount() == 12, "three fire totals merge and preserve remaining damage");
         game.endTurn();
-        check(first.getStamina() == 12 && first.getNextStamina() == 0 && first.getActions().isEmpty(), "bonus lasts one turn");
+        check(first.getStamina() == 12 && first.getNextStamina() == 0 && first.getActions().isEmpty(), "bonus lasts one turn and plan resets");
         game.act(Player.Action.use(fire));
         check(first.hasUsed(fire), "weapon reusable next turn");
     }
@@ -166,7 +171,7 @@ public class GameTest {
         actor.takeDamage(20);
         Item tea = add(actor, "Bylinný čaj");
         game.act(Player.Action.use(tea));
-        check(actor.getHealth() == 20 && actor.getEffects().size() == 1, "regeneration starts next turn");
+        check(actor.getHealth() == 20 && actor.getEffects().isEmpty(), "queued regeneration has no immediate effect");
         game.endTurn();
         game.endTurn();
         check(actor.getHealth() == 24, "first healing tick");
@@ -175,7 +180,9 @@ public class GameTest {
         check(actor.getHealth() == 28 && actor.getEffects().isEmpty(), "second healing tick");
         Item instant = add(actor, "Životabudič");
         game.act(Player.Action.use(instant));
-        check(actor.getHealth() == 40, "instant heal capped");
+        check(actor.getHealth() == 28, "queued direct heal does not resolve immediately");
+        game.endTurn();
+        check(actor.getHealth() == 40, "direct heal capped on resolution");
 
         Player player = new Player("Effects");
         player.addEffect(new Damage(Damage.DamageType.POISON, 5, 3));
@@ -224,8 +231,11 @@ public class GameTest {
         check(actor.getHealth() == 22, "below half triggers passive");
         Item power = add(actor, "Válečníkův amulet");
         actor.getEquipment().equipTrinket(power);
+        Player target = game.getOpponent();
         game.act(Player.Action.attack());
-        check(game.getOpponent().getHealth() == 35, "offensive trinket");
+        check(target.getHealth() == 40, "offensive bonus remains queued");
+        game.endTurn();
+        check(target.getHealth() == 35, "offensive trinket on resolution");
     }
 
     private static void matchAndRotation() {
@@ -240,6 +250,8 @@ public class GameTest {
             int winnerGold = game.getCurrentPlayer().getGold();
             int loserGold = loser.getGold();
             game.act(Player.Action.attack());
+            check(game.getWins(champion) == round, "queued attack does not award victory");
+            game.endTurn();
             check(game.getWins(champion) == round + 1, "score advances");
             check(game.getPlayer(champion).getGold() == winnerGold + 6 && loser.getGold() == loserGold + 9,
                     "catch up rewards");

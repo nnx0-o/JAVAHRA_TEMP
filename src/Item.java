@@ -21,6 +21,7 @@ public class Item {
     private final String name;
     private final int price;
     private final int staminaCost;
+    private final int repeatCostIncrease;
     private final int power;
     private final int duration;
     private final Damage.DamageType damageType;
@@ -40,6 +41,16 @@ public class Item {
     public Item(ItemType itemType, String name, int price, int staminaCost, int power,
             int duration, Damage.DamageType damageType, Rarity rarity, int minStock,
             int maxStock, Passive passive, int threshold, int staminaPenalty, String description) {
+        this(itemType, name, price, staminaCost, power, duration, damageType, rarity, minStock,
+                maxStock, passive, threshold, staminaPenalty, description,
+                Math.max(1, (int) Math.round(staminaCost / 2.0)));
+    }
+
+    public Item(ItemType itemType, String name, int price, int staminaCost, int power,
+            int duration, Damage.DamageType damageType, Rarity rarity, int minStock,
+            int maxStock, Passive passive, int threshold, int staminaPenalty, String description,
+            int repeatCostIncrease) {
+        if (repeatCostIncrease < 0) throw new IllegalArgumentException("Neplatné navýšení ceny.");
         if (itemType == null || name == null || name.isBlank() || price < 0 || staminaCost < 0
                 || power < 0 || duration < 1 || damageType == null || rarity == null
                 || minStock < 1 || maxStock < minStock || passive == null || threshold < 0
@@ -50,6 +61,7 @@ public class Item {
         this.name = name;
         this.price = price;
         this.staminaCost = staminaCost;
+        this.repeatCostIncrease = repeatCostIncrease;
         this.power = power;
         this.duration = duration;
         this.damageType = damageType;
@@ -68,7 +80,17 @@ public class Item {
     public String getName() { return name; }
     public int getPrice() { return price; }
     public int getStaminaCost() { return staminaCost; }
-    public int getPower() { return power; }
+    public int getRepeatCostIncrease() { return repeatCostIncrease; }
+    public int getPower() { return power; } // u casovaneho ucinku jde o silu jedne davky
+    public boolean hasTimedEffect() {
+        return itemType == ItemType.DAMAGE && damageType != Damage.DamageType.PHYSICAL
+                || itemType == ItemType.HEAL && duration > 1;
+    }
+
+    // model poskozeni potrebuje celkovy soucet aby mohl slucovat a ocistovat zbytky
+    public int getTotalPower() {
+        return hasTimedEffect() ? Math.multiplyExact(power, duration) : power;
+    }
     public int getDuration() { return duration; }
     public Damage.DamageType getDamageType() { return damageType; }
     public Rarity getRarity() { return rarity; }
@@ -90,7 +112,7 @@ public class Item {
     public Item copy() {
         // kazdy koupeny kus ma vlastni identitu i kdyz pochazi ze stejne nabidky
         return new Item(itemType, name, price, staminaCost, power, duration, damageType,
-                rarity, minStock, maxStock, passive, threshold, staminaPenalty, description);
+                rarity, minStock, maxStock, passive, threshold, staminaPenalty, description, repeatCostIncrease);
     }
 
     @Override

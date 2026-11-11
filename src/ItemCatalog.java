@@ -14,7 +14,7 @@ public final class ItemCatalog {
 
     private static List<Item> createItems() {
         List<Item> items = new ArrayList<>();
-        // zbrane maji cenu vydrz celkovy ucinek a pocet vlastnich tahu cile
+        // casovane zbrane maji silu za kazdy vlastni tah cile a pocet techto tahu
         weapon(items, "Dýka", 3, 2, 4, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 2, 3);
         weapon(items, "Krátký meč", 4, 3, 6, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
         weapon(items, "Tesák", 5, 3, 7, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 2);
@@ -27,32 +27,32 @@ public final class ItemCatalog {
         weapon(items, "Obouruční meč", 12, 8, 19, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Mistrovská čepel", 14, 5, 13, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Železný palcát", 4, 4, 8, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
-        weapon(items, "Pochodeň", 3, 2, 7, 3, Damage.DamageType.FIRE, Rarity.COMMON, 2, 3);
-        weapon(items, "Žhavý prut", 5, 3, 11, 3, Damage.DamageType.FIRE, Rarity.COMMON, 1, 2);
-        weapon(items, "Plamenná hůl", 7, 4, 15, 4, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
-        weapon(items, "Ohnivá čepel", 9, 5, 17, 3, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 1);
-        weapon(items, "Dračí žezlo", 13, 7, 24, 4, Damage.DamageType.FIRE, Rarity.RARE, 1, 1);
-        weapon(items, "Jiskřící hůlka", 6, 2, 8, 2, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
-        weapon(items, "Jedovatá jehla", 3, 2, 5, 3, Damage.DamageType.POISON, Rarity.COMMON, 2, 3);
-        weapon(items, "Hadí dýka", 5, 3, 8, 4, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
-        weapon(items, "Morová hůl", 7, 4, 11, 3, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 2);
-        weapon(items, "Štíří kopí", 9, 5, 14, 4, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 1);
-        weapon(items, "Zmijí tesák", 12, 6, 17, 4, Damage.DamageType.POISON, Rarity.RARE, 1, 1);
-        weapon(items, "Trnový bič", 6, 3, 9, 3, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
+        weapon(items, "Pochodeň", 3, 2, 2, 3, Damage.DamageType.FIRE, Rarity.COMMON, 2, 3);
+        weapon(items, "Žhavý prut", 5, 3, 4, 3, Damage.DamageType.FIRE, Rarity.COMMON, 1, 2);
+        weapon(items, "Plamenná hůl", 7, 4, 4, 4, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
+        weapon(items, "Ohnivá čepel", 9, 5, 6, 3, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 1);
+        weapon(items, "Dračí žezlo", 13, 7, 6, 4, Damage.DamageType.FIRE, Rarity.RARE, 1, 1);
+        weapon(items, "Jiskřící hůlka", 6, 2, 4, 2, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
+        weapon(items, "Jedovatá jehla", 3, 2, 2, 3, Damage.DamageType.POISON, Rarity.COMMON, 2, 3);
+        weapon(items, "Hadí dýka", 5, 3, 2, 4, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
+        weapon(items, "Morová hůl", 7, 4, 4, 3, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 2);
+        weapon(items, "Štíří kopí", 9, 5, 4, 4, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 1);
+        weapon(items, "Zmijí tesák", 12, 6, 4, 4, Damage.DamageType.POISON, Rarity.RARE, 1, 1);
+        weapon(items, "Trnový bič", 6, 3, 3, 3, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
 
-        // kratke leceni je okamzite a delsi zacina az v pristim vlastnim tahu
+        // kratke leceni probiha pri provedeni planu a delsi zacina v pristim vlastnim tahu
         heal(items, "Malý léčivý lektvar", 2, 2, 5, 1, Rarity.COMMON, 2, 4);
         heal(items, "Léčivý lektvar", 3, 3, 8, 1, Rarity.COMMON, 2, 3);
         heal(items, "Silný léčivý lektvar", 5, 4, 13, 1, Rarity.UNCOMMON, 1, 3);
         heal(items, "Životabudič", 6, 5, 17, 1, Rarity.RARE, 1, 2);
-        heal(items, "Bylinný čaj", 2, 2, 8, 2, Rarity.COMMON, 2, 4);
-        heal(items, "Hojivá mast", 3, 2, 10, 3, Rarity.COMMON, 2, 3);
-        heal(items, "Regenerační odvar", 4, 3, 14, 3, Rarity.UNCOMMON, 1, 3);
-        heal(items, "Jarní esence", 5, 3, 16, 4, Rarity.UNCOMMON, 1, 2);
-        heal(items, "Balzám obnovy", 6, 4, 20, 4, Rarity.RARE, 1, 2);
+        heal(items, "Bylinný čaj", 2, 2, 4, 2, Rarity.COMMON, 2, 4);
+        heal(items, "Hojivá mast", 3, 2, 3, 3, Rarity.COMMON, 2, 3);
+        heal(items, "Regenerační odvar", 4, 3, 5, 3, Rarity.UNCOMMON, 1, 3);
+        heal(items, "Jarní esence", 5, 3, 4, 4, Rarity.UNCOMMON, 1, 2);
+        heal(items, "Balzám obnovy", 6, 4, 5, 4, Rarity.RARE, 1, 2);
         heal(items, "Obvaz", 2, 1, 4, 1, Rarity.COMMON, 2, 4);
         heal(items, "Polní tinktura", 3, 4, 10, 1, Rarity.COMMON, 1, 3);
-        heal(items, "Měsíční voda", 4, 2, 12, 4, Rarity.UNCOMMON, 1, 3);
+        heal(items, "Měsíční voda", 4, 2, 3, 4, Rarity.UNCOMMON, 1, 3);
 
         stamina(items, "Doušek síly", 2, 3, 3, Rarity.COMMON, 2, 4);
         stamina(items, "Lektvar výdrže", 3, 3, 4, Rarity.COMMON, 2, 3);
@@ -115,19 +115,21 @@ public final class ItemCatalog {
     private static void weapon(List<Item> items, String name, int price, int cost, int power,
             int duration, Damage.DamageType type, Rarity rarity, int min, int max) {
         String description = type == Damage.DamageType.PHYSICAL
-                ? "Způsobí ihned " + power + " fyzického poškození."
-                : "Způsobí celkem " + power + " poškození (" + type + ") během " + duration
-                        + " vlastních tahů soupeře, od začátku jeho příštího tahu. "
+                ? "Při provedení plánu způsobí " + power + " fyzického poškození."
+                : type + ": " + power + " poškození po dobu " + duration + " tahů (celkem " + power * duration
+                        + "). Působí na začátku soupeřova tahu, poprvé po provedení plánu. "
                         + (type == Damage.DamageType.FIRE ? "Oheň se slučuje a zachovává celkový zbytek." : "Každý jed působí samostatně.");
         items.add(new Item(ItemType.DAMAGE, name, price, cost, power, duration, type, rarity, min, max,
-                Item.Passive.NONE, 0, 0, description + " Cena: " + cost + " výdrže. Jednou za vlastní tah; zůstává."));
+                Item.Passive.NONE, 0, 0, description + " Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže."));
     }
 
     private static void heal(List<Item> items, String name, int price, int cost, int power,
             int duration, Rarity rarity, int min, int max) {
-        String timing = duration == 1 ? "ihned" : "během " + duration + " vlastních tahů od příštího tahu";
+        String health = power + (power == 1 ? " život" : power <= 4 ? " životy" : " životů");
+        String effect = duration == 1 ? "Při provedení plánu obnoví " + health
+                : "Obnoví " + health + " za tah po dobu " + duration + " tahů (celkem " + power * duration + "), od příštího vlastního tahu";
         items.add(new Item(ItemType.HEAL, name, price, cost, power, duration, Damage.DamageType.HEAL,
-                rarity, min, max, Item.Passive.NONE, 0, 0, "Obnoví celkem " + power + " životů " + timing
+                rarity, min, max, Item.Passive.NONE, 0, 0, effect
                 + ", nejvýše do maxima. Cena: " + cost + " výdrže. Po použití se spotřebuje."));
     }
 
@@ -143,7 +145,7 @@ public final class ItemCatalog {
         items.add(new Item(ItemType.DEFEND, name, price, cost, power, 1, Damage.DamageType.PHYSICAL,
                 rarity, min, max, Item.Passive.NONE, 0, 0, "Pohltí celkem až " + power
                 + " poškození všech typů po zbroji. Platí ihned až do konce úvodních účinků příštího vlastního tahu. "
-                + "Cena: " + cost + " výdrže. Jednou za vlastní tah; zůstává. Štíty se sčítají."));
+                + "Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže. Štíty se sčítají."));
     }
 
     private static void armor(List<Item> items, String name, int price, int percent,

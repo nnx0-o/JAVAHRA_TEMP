@@ -29,22 +29,30 @@ public class BalanceRegressionTest {
         armored.addShield(2);
         check(armored.receiveDamage(2, Damage.DamageType.POISON) == 0, "active shield can still fully block");
 
-        for (String[] build : new String[][]{{"Dýka", "Kožený štít", "Kožený štít"}, {"Kožená zbroj", "Prsten obnovy"}}) {
-            Game game = new Game("A", "B", new Random(2));
-            game.openShop();
-            for (int index = 0; index < 2; index++) {
-                Player actor = game.getPlayer(index);
-                for (String name : build) {
-                    Item piece = item(name).copy();
-                    actor.addToInventory(piece);
-                    if (piece.getItemType() == ItemType.ARMOR) actor.getEquipment().equipArmor(piece);
-                    if (piece.getItemType() == ItemType.TRINKET) actor.getEquipment().equipTrinket(piece);
-                }
-            }
-            game.continueShop(); game.continueShop();
-            for (int turn = 0; turn < 100 && game.getPhase() == Game.Phase.COMBAT; turn++) BalanceSimulation.playTurn(game);
-            check(game.getPhase() == Game.Phase.RESULT, "reproduced defensive loop must finish without exhaustion");
-        }
+        Game queued = new Game("A", "B", new Random(2));
+        queued.openShop();
+        queued.continueShop(); queued.continueShop();
+        queued.endTurn(); queued.endTurn();
+        Player attacker = queued.getCurrentPlayer();
+        Player defender = queued.getOpponent();
+        Item defenderArmor = item("Kožená zbroj").copy();
+        defender.addToInventory(defenderArmor);
+        defender.getEquipment().equipArmor(defenderArmor);
+        queued.act(Player.Action.attack());
+        check(defender.getHealth() == 40, "planned damage does not resolve before end turn");
+        queued.endTurn();
+        check(defender.getHealth() == 38, "physical mitigation applies on resolution with nearest rounding");
+        queued.endTurn();
+        check(defender.getHealth() == 38 && queued.getCurrentPlayer() == attacker,
+                "completed damage is not repeated on a later turn");
+        defender.takeDamage(37);
+        queued.act(Player.Action.attack());
+        check(queued.getPhase() == Game.Phase.COMBAT, "planned lethal damage is deferred");
+        queued.endTurn();
+        check(queued.getPhase() == Game.Phase.RESULT, "deferred lethal action finishes combat");
+        int wins = queued.getWins(queued.getWinner());
+        queued.endTurn();
+        check(queued.getWins(queued.getWinner()) == wins, "result cannot resolve the dead player's turn or award twice");
 
         Shop shop = new Shop();
         shop.refresh(new Random() {

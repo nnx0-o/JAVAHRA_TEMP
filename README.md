@@ -1,99 +1,87 @@
-# Duel pro dva
+# Duel 1V1
 
-Lokální tahová hra pro dva hráče u jedné klávesnice. Vyhrává první hráč se třemi vítěznými souboji. Rozhraní i popisy předmětů jsou v češtině.
+Lokální hra pro dva hráče u jedné klávesnice. Nakupte vybavení, naplánujte akce a vyhrajte tři souboje. Rozhraní, předměty, popisy i návod jsou v češtině. Angličtina zatím není v nabídce.
 
 ## Spuštění
 
-Použij JDK 17 nebo novější a skutečný interaktivní terminál, alespoň 60 × 24 znaků. Doporučená šířka je 100 znaků, aby byly přehledně vidět statistiky obou hráčů.
+JDK 17 nebo novější, interaktivní terminál alespoň **100 × 32 znaků**. Doporučená velikost je **140 × 42**.
 
 ```bash
-javac -encoding UTF-8 -d build/check src/*.java
+javac --release 17 -encoding UTF-8 -d build/check src/*.java
 java -cp build/check Main
 ```
 
-Šipky vybírají prvek, Enter potvrdí tlačítko nebo zahájí a ukončí úpravu jména. Ctrl+C hru ukončí. Českou diakritiku lze používat i ve jménech. Zmenšení okna pod minimální rozměry pozastaví ovládání; po zvětšení lze pokračovat. Hra se neukládá po ukončení programu.
+Volitelně lze změnit mezeru mezi hlavním obsahem a pravými panely:
 
-## Průběh zápasu
+```bash
+java -Dduel.panelGap=4 -cp build/check Main
+```
 
-1. Zadejte jména a potvrďte připravenost. Hra vylosuje prvního nakupujícího; druhý nakupující začne souboj.
-2. Každý začíná s **15 zlatými**, **40 životy**, **12 výdrže** a inventářem na **10 předmětů**.
-3. Obchod obsahuje **10 různých společných nabídek**, vybraných ze **76 předmětů**. Každá má vlastní rozsah počtu kusů a mírnou váhu podle vzácnosti. Menší terminál nabídku rozdělí do stránek.
-4. Kliknutí na nabídku otevře popis a možnost nákupu. Inventář umožňuje přečíst popis, vybavit zbroj či talisman a prodat předmět. Prodej vrací polovinu ceny **zaokrouhlenou dolů**; předmět zmizí a nevrací se do obchodu.
-5. „Pokračovat“ předá obchod druhému hráči. Teprve dvě návštěvy za sebou bez úspěšného nákupu nebo prodeje zahájí boj. Dosavadní nákupy, zlato ani sklad se při předání neresetují.
-6. Oba hráči mají nejprve jeden vlastní přípravný tah bez útoků. Mohou použít štíty, léčení a lektvary výdrže.
-7. Poté hráč používá akce do vyčerpání výdrže nebo podle svého rozhodnutí. Akce se provádějí ihned. Tlačítkem „Ukončit tah“ předá hru soupeři. Stavy, vybavení a časované účinky obou hráčů jsou veřejné.
-8. Smrt okamžitě ukončí souboj. Vítěz dostane **6 zlata**, poražený **9**. Do dalšího souboje zůstávají peníze a předměty; zdraví, výdrž a bojové účinky se resetují. Pořadí obchodu a boje se obrátí bez ohledu na vítěze.
+Šipky vybírají prvky i doleva a doprava, Enter potvrzuje. **F1** nebo **H** otevře návod, **L** historii, **Esc** vrací předchozí pohled, **Ctrl+C** ukončí hru. Při výběru bojové výbavy zobrazí **I** popis vybraného předmětu. Během úpravy jména se písmena zapisují do jména. Zmenšení okna pod minimum pozastaví ovládání, nikoli uložený stav zápasu.
 
-## Bojová pravidla
+## Orientace v rozhraní
 
-- Výdrž se obnovuje na začátku vlastního tahu. Těžká zbroj může snížit její základ. Bonus z lektvaru se přidá příští vlastní tah a může překročit maximum, například na 14/12.
-- Každý kus zbraně a štítu lze použít jednou za vlastní tah. Více samostatných kusů lze použít zvlášť. Lektvary léčení a výdrže se spotřebují. Základní útok je zdarma, jednou za tah, za 3 fyzického poškození.
-- Na začátku tahu působí nejprve vybavený talisman, potom časované účinky v pořadí vzniku. Léčení vytvořené před jedem tedy působí dříve. Pokud ale dřívější účinek hráče zabije, pozdější léčení už nepomůže.
-- Fyzické poškození působí okamžitě. Jed působí postupně; každá aplikace má vlastní časovač. Oheň se sloučí do jediného účinku: sečte zbývající poškození a ponechá delší zbývající trvání.
-- Dávka časovaného účinku je zbývající celková hodnota dělená zbývajícím počtem tahů, zaokrouhlená na nejbližší celé číslo. Poloviny se zaokrouhlují nahoru. Skutečná dávka se odečte ze zbytku, takže se zachová celkový účinek. Například 15 poškození na čtyři tahy: **4, 4, 4, 3**.
-- Zbroj snižuje určitý typ poškození procentem nebo odečítá pevnou hodnotu při splnění prahu. Prahová zbroj vždy propustí alespoň polovinu zásahu zaokrouhlenou na nejbližší celé číslo; aktivní štít může pohltit i tento zbytek. Pak se uplatní aktivní štít. Štít má společnou zásobu pro všechny typy poškození, platí ihned a zanikne po úvodních účincích příštího vlastního tahu.
-- Léčení s trváním jeden tah působí ihned. Delší léčení začne na začátku příštího vlastního tahu a nikdy nepřekročí maximum života.
-- Lze vybavit jednu zbroj a jeden talisman, pouze v obchodě. Vybavené předměty stále zabírají místo v inventáři. Talisman může léčit, čistit jed či oheň, přidávat výdrž, posílit fyzické útoky nebo rozšířit inventář. Před sundáním či prodejem brašny se musí zbývající obsah vejít.
+- Bílá patří úvodním a výsledkovým obrazovkám; oranžová prvnímu hráči a mátová druhému. Záhlaví ukazuje souboj, fázi a aktuálního hráče.
+- Vlevo nahoře je skóre a pořadí začátku obchodu a boje. Samostatný rámeček pod ním zobrazuje zprávy.
+- Vpravo zůstávají oba hráči: životy, štít, vybavení a účinky. Zlato je vidět v obchodě a po výsledku. Zbývající výdrž je přímo v záhlaví bojové výbavy a detailu předmětu. Podrobnosti rozbalí úplný stav hráče.
+- Obchod má kompaktní sloupce předmětu, účinku, ceny a množství, s jemným střídáním pozadí celých řádků. Jejich šířka se na velkém terminálu neprotahuje bez omezení. V záhlaví obchodu vidíš své zlato. Zlato je žluté, dostupné kusy zelené, vyprodané červené. Nedostupný nákup je vysvětlený a vypnutý.
+- Návod a historie jsou globální ovládací prvky v patičce. Otevření ani zavření nespotřebuje tah a nemaže plán.
 
-Očistné talismany odstraní před působením účinků nejvýše 3 zbývajícího poškození příslušného typu za vlastní tah. U jedu se tento rozpočet rozdělí od nejstaršího účinku; nejde o imunitu. Zbraně do 7 zlata mají trojnásobnou váhu při losování obchodu. Žádná nabídka ani kategorie není zaručena.
+## Zápas a obchod
 
-Čísla jsou výchozí pro další hraní a ladění. Nejde o finálně vyváženou ekonomiku. Obecná nastavení jsou v `src/GameRules.java`; jednotlivé ceny, síly, náklady, zásoby a popisy v `src/ItemCatalog.java`. Hra zatím nemá limit tahů ani automatické řešení patové situace.
+Každý začíná s **15 zlatými**, **40 životy**, **12 výdrže** a **10 místy v inventáři**. Po zadání jmen hra přejde do obchodu. První nakupující se losuje a druhý začne boj; příští souboj si pořadí obrátí.
 
-## Struktura kódu
+Deset náhodných nabídek vychází ze 76 předmětů. Oba hráči nakupují stejnou zásobu, která se při předání neresetuje. Zbraně do 7 zlata mají trojnásobnou váhu výběru; žádná kategorie není zaručená. Rarita mění pravděpodobnost, množství má každý předmět vlastní rozsah.
 
-| Soubor | Odpovědnost |
-|---|---|
-| `Main.java` | Jména, obrazovky, tlačítka, stránkování a propojení s hrou |
-| `Game.java` | Fáze zápasu, pořadí hráčů, akce, pasivní účinky, vítězství a odměny |
-| `GameRules.java` | Výchozí hodnoty pro snadné ladění |
-| `Player.java` | Stav hráče, historie akcí v tahu, výdrž, účinky a příjem poškození |
-| `Inventory.java` | Vlastněné kusy, kapacita a odkazy na vybavení |
-| `Damage.java` | Zbývající celkový účinek, časovač, zaokrouhlení a slučování ohně |
-| `Item.java`, `ItemType.java`, `Rarity.java` | Neměnné vlastnosti předmětů a jejich druhy |
-| `ItemCatalog.java` | 76 předmětů a jejich české popisy |
-| `Shop.java` | Náhodná nabídka, zásoby, nákup a prodej |
-| `MiniTui.java` | Terminál, vykreslování, klávesnice a změny velikosti |
-| `Test.java` | Samostatná ukázka rozhraní; není hlavní hra |
+V obchodě lze nakupovat, prodávat a měnit vybavení. Prodej vrátí polovinu ceny **zaokrouhlenou dolů** a předmět odstraní. Pokud dva hráči za sebou pokračují bez nákupu či prodeje, začne boj. Tlačítko vždy říká, zda předá obchod konkrétnímu hráči, nebo zahájí souboj.
 
-Podrobný anglický průvodce změnami, rozhodnutími a důvody je v `.leave/progress.txt`. Adresář `.leave` je podle stávajícího `.gitignore` lokální a nesleduje se v Gitu.
+Vítěz dostane **6 zlata**, poražený **9**. V dalším souboji zůstávají peníze a nevyužité předměty; zdraví, výdrž a bojové stavy se resetují. Tři vítězství ukončí zápas. Výsledek uvádí odměny u jmen hráčů.
+
+## Plánování a pořadí akcí
+
+Každý hráč dostane jeden přípravný tah bez útoků. Potom začíná **kolo 1**, složené z tahů obou hráčů. Záhlaví ukazuje i pozici v kole, například `Kolo 1 (2/2)`.
+
+Výběr akce ji přidá do viditelného plánu a rezervuje výdrž. **Životy, štíty, léčení, spotřeba lektvarů a nové stavy se mění až při potvrzení konce tahu.** Plán se provede shora dolů a při smrti se další akce zastaví. Vybranou akci lze odebrat; rezervace výdrže se přepočítá. Pořadí odpovídá pořadí přidávání.
+
+Pěst je trvalou součástí výbavy, nestojí zlato a nezabírá inventář, ale stojí výdrž. První použití stojí 2, další ve stejném tahu 3, 4 atd. Zbraně a štíty jsou opakovatelné a mají vlastní přírůstek ceny; cena se obnoví na začátku dalšího vlastního tahu. Lektvar lze naplánovat jednou na fyzický kus a spotřebuje se až při provedení.
+
+Na začátku vlastního tahu se obnoví výdrž, působí talisman a potom časované účinky v pořadí vzniku. Bonus výdrže může překročit běžné maximum. Starý štít kryje i úvodní účinky a potom zanikne.
+
+## Poškození a předměty
+
+Fyzické poškození působí při vyhodnocení akce. Jed a oheň působí na začátku dalších tahů cíle. **Síla časovaného předmětu znamená dávku za tah**, Všude se používá zápis **`Jed: 4 × 3 (12)`**: síla × počet tahů (celkem). Léčení používá stejný zápis. Přímé poškození se zkracuje například na `3 fyzické`. Uvedené poškození je před obranou cíle.
+
+Sloučení ohně nebo očista mohou změnit zbývající dávky. Stav pak ukazuje přesnou posloupnost a celkový zbytek, například `Oheň: 5 → 6 → 5 (16)`; neslibuje konstantní dávku, pokud by součet neseděl.
+
+Oheň sčítá zbývající celkové poškození a ponechá delší trvání. Jedy zůstávají samostatné. Dávka je zbývající součet dělený zbývajícím počtem tahů, zaokrouhlený na nejbližší celé číslo. Při dělení se odečítá skutečná dávka, aby se zachoval součet. Životy jsou celá čísla. Výjimkou zaokrouhlování je prodejní cena, která se zaokrouhluje dolů.
+
+Zbroj působí před štítem. Odolnost snižuje konkrétní typ poškození; prahová zbroj odečítá při splnění podmínky a propustí alespoň polovinu zásahu zaokrouhlenou nejbližším celým číslem. Aktivní štít může pohltit i zbytek. Očistné talismany odebírají nejvýše 3 zbývajícího poškození daného typu za vlastní tah, ne celý stav bez omezení.
+
+Vybavit lze jednu zbroj a jeden talisman, pouze v obchodě. Vybavení zabírá místo v inventáři. Brašna přidá místa při vybavení; při sundání či prodeji se zbývající obsah musí vejít. Čísla pro ladění jsou v `src/GameRules.java` a `src/ItemCatalog.java`. Názvy a popisy odvozené z aktuálních hodnot spravuje `src/GameText.java`.
+
+Hra zatím nemá limit tahů, automatickou remízu, ukládání po ukončení ani síťové hraní. Předchozí zpráva z vyvažování v `playtests/balance-report.md` zachycuje starší pravidla před zavedením plánů a placené opakovatelné pěsti.
 
 ## Ověření
-
-Testy nevyžadují externí knihovny:
 
 ```bash
 javac --release 17 -encoding UTF-8 -d build/check src/*.java tests/*.java
 java -cp build/check DamageTest
 java -cp build/check GameTest
+java -cp build/check QueuedCombatTest
+java -cp build/check TimedItemTest
 java -cp build/check MainUiTest
+java -cp build/check MiniTuiWidgetTest
 java -cp build/check TerminalInputTest
 java -cp build/check BalanceRegressionTest
-```
-
-Na Linuxu lze navíc spustit skutečnou terminálovou zkoušku přes Python 3:
-
-```bash
 python3 tests/terminal_smoke.py
 ```
 
-Volitelný první argument je cesta k programu `java`. Zkouška projde zadání jména s diakritikou, obchod, přípravu, útok a ukončení. Terminálový záznam uloží do `build/terminal-smoke.txt`.
-
-## Textová verze a opakovatelné hraní
-
-`Playtest` nabízí stejného hráče, obchod a bojový model přes řádkové příkazy. Používá stejná pravidla jako `Main`, nikoli zjednodušenou kopii. Výchozí jména v obou verzích jsou Hráč 1 a Hráč 2.
+`MainUiTest` ukládá skutečně vykreslené terminálové snímky do `build/ui-snapshots`. Volitelný převod do PNG vyžaduje Python s Pillow:
 
 ```bash
-java -cp build/check Playtest 17
+python3 tests/render_terminal.py
 ```
 
-Číslo je semínko náhody, takže stejné příkazy vytvoří stejný průběh. `shop` otevře obchod, `buy N` koupí nabídku, `equip N` vybaví vlastní předmět, `use N` ho použije a `attack` provede základní útok. `end` předá obchod nebo ukončí bojový tah. `next` pokračuje po výsledku, `log` vypíše historii a `quit` skončí. `offer N` a `item N` zobrazí popis. Po spotřebování nebo prodeji se čísla vlastních předmětů posunou podle aktuálního výpisu.
+Řádková verze stejného herního modelu se spouští `java -cp build/check Playtest 17`. Číslo je semínko náhody. Popis příkazů se vypíše při spuštění; `end` vyhodnotí aktuální plán. Pro vývoj existuje také `BalanceSimulation`, jeho jednoduché strategie ale nepředstavují optimální lidské hraní.
 
-Automatický zátěžový test odehraje pevné souboje i náhodné zápasy:
-
-```bash
-java -cp build/check BalanceSimulation 1000 10000 balanced
-java -cp build/check BalanceSimulation 1000 10000 defensive
-java -cp build/check BalanceSimulation 1000 10000 aggressive
-```
-
-Argumenty určují počet zápasů, posun semínek a strategii. Limit 160 tahů je pouze pojistka testu, nikoli pravidlo hry. Strategie jsou jednoduché heuristiky; výsledky nejsou důkazem optimálního hraní. Výsledky první úpravy vyvážení a její omezení popisuje [zpráva z hraní](playtests/balance-report.md).
+Podrobný **anglický** záznam rozhodnutí a jejich změn je v `.leave/progress.txt`, aktuálně sekce 16. Adresář `.leave` je podle stávajícího `.gitignore` pouze lokální. Starší sekce jsou historické a nejsou aktuální specifikací hry.

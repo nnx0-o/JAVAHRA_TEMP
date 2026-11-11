@@ -285,10 +285,16 @@ public class MiniTui {
     // hlavni trida muze menit jeho obsah pri zmene statistik nebo zpravy
     public static class Label extends Element {
         private volatile String text;
+        public volatile String colorCode = Color.DEFAULT;
 
         public Label(int x, int y, int z, String text) {
             super(x, y, z, false);
             this.text = text;
+        }
+
+        public Label(int x, int y, int z, String text, String colorCode) {
+            this(x, y, z, text);
+            this.colorCode = colorCode;
         }
 
         public void setText(String text) {
@@ -302,8 +308,7 @@ public class MiniTui {
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
-            int maxLen = Math.max(1, termWidth - x - 2);
-            return text.length() > maxLen ? text.substring(0, maxLen) : text;
+            return colorCode + fitCell(text, Math.max(0, termWidth - x - 1), false) + Color.RESET;
         }
     }
 
@@ -315,6 +320,7 @@ public class MiniTui {
         public volatile int width;
         public Consumer<String> onChange;
         public Consumer<String> onSubmit;
+        public volatile String colorCode = Color.CYAN;
 
         public Input(int x, int y, int z, String label, String defaultValue, int width) {
             super(x, y, z, true);
@@ -375,9 +381,9 @@ public class MiniTui {
                     : String.format("%-" + fieldWidth + "s", value);
 
             if (editing) {
-                return " " + label + ": " + Color.apply("[" + displayVal + "]", Color.BG_YELLOW, Color.BLACK) + " ";
+                return " " + label + ": " + Color.apply("[" + displayVal + "]", Color.REVERSE, colorCode) + " ";
             } else if (focused) {
-                return Color.apply(" " + label + ": [" + displayVal + "] ", Color.REVERSE, Color.CYAN);
+                return Color.apply(" " + label + ": [" + displayVal + "] ", Color.REVERSE, colorCode);
             } else {
                 return " " + label + ": [" + displayVal + "] ";
             }
@@ -389,6 +395,9 @@ public class MiniTui {
     public static class Button extends Element {
         public volatile String text;
         public Runnable action;
+        public volatile String colorCode;
+        public volatile boolean enabled = true;
+        public volatile boolean primary = false;
 
         public Button(int x, int y, int z, String text, Runnable action) {
             super(x, y, z, true);
@@ -411,11 +420,83 @@ public class MiniTui {
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
-            if (focused) {
-                return Color.apply(" < " + text + " > ", Color.REVERSE, Color.GREEN);
-            }
-            return " [ " + text + " ] ";
+            String accent = colorCode == null ? Color.WHITE : colorCode;
+            String style = enabled ? accent : Color.BRIGHT_BLACK;
+            String marker = focused ? " > " : "   ";
+            return Color.apply(marker, focused ? Color.REVERSE : "", style)
+                    + Color.apply((primary ? "[ " : "") + text + (primary ? " ]" : ""),
+                    primary ? Color.BOLD : "", style);
         }
+    }
+
+    // tabulkova radka zvyrazni pouze ukazatel a ponecha barvy jednotlivych sloupcu
+    public static class TableRow extends Button {
+        private final List<String> cells;
+        private final List<Integer> widths;
+        private final List<String> colors;
+        public volatile String backgroundCode = "";
+
+        public TableRow(int x, int y, int z, String name, List<String> cells,
+                        List<Integer> widths, List<String> colors, Runnable action) {
+            super(x, y, z, name, action);
+            if (cells.size() != widths.size() || cells.size() != colors.size()) {
+                throw new IllegalArgumentException("Pocet sloupcu neodpovida jejich nastaveni");
+            }
+            this.cells = List.copyOf(cells);
+            this.widths = List.copyOf(widths);
+            this.colors = List.copyOf(colors);
+        }
+
+        @Override
+        public String render(boolean focused, boolean editing, int termWidth) {
+            String accent = colorCode == null ? Color.WHITE : colorCode;
+            StringBuilder result = new StringBuilder(Color.apply(focused ? " > " : "   ",
+                    backgroundCode, focused ? Color.REVERSE : "", enabled ? accent : Color.BRIGHT_BLACK));
+            int available = Math.max(0, termWidth - x - 3);
+            for (int index = 0; index < cells.size() && available > 0; index++) {
+                int size = Math.min(Math.max(0, widths.get(index)), available);
+                // pozadi obnovime po resetu aby spojovalo bunky i mezery cele radky
+                result.append(backgroundCode).append(colors.get(index))
+                        .append(fitCell(cells.get(index), size, true)).append(Color.RESET);
+                available -= size;
+                if (available > 0 && index + 1 < cells.size()) {
+                    result.append(backgroundCode).append(' ').append(Color.RESET); available--;
+                }
+            }
+            return result.toString();
+        }
+    }
+
+    // sirku pocitame ze zobrazitelnych bunek a z ansi prijimame pouze styly
+    private static String fitCell(String text, int width, boolean pad) {
+        StringBuilder result = new StringBuilder();
+        int columns = 0;
+        for (int index = 0; index < text.length();) {
+            int point = text.codePointAt(index);
+            if (point == 27) {
+                int end = index + 1;
+                if (end < text.length() && text.charAt(end) == '[') {
+                    end++;
+                    while (end < text.length() && (text.charAt(end) < '@' || text.charAt(end) > '~')) end++;
+                    if (end < text.length()) {
+                        String sequence = text.substring(index, end + 1);
+                        if (sequence.matches("\\u001B\\[[0-9;:]*m")) result.append(sequence);
+                        index = end + 1;
+                        continue;
+                    }
+                }
+                index++;
+                continue;
+            }
+            index += Character.charCount(point);
+            if (Character.isISOControl(point)) continue;
+            int size = displayColumns(point);
+            if (columns + size > width) break;
+            result.appendCodePoint(point);
+            columns += size;
+        }
+        if (pad) result.append(" ".repeat(Math.max(0, width - columns)));
+        return result.toString();
     }
 
     // ------------------------------------ stav smycky ------------------------------------
@@ -425,6 +506,8 @@ public class MiniTui {
     // vstupni vlakno predava nazvy klaves do bezpecne fronty
     // hlavni smycka je vybira bez cekani a zustava nezavisla na cteni terminalu
     private final BlockingQueue<String> keyQueue = new LinkedBlockingQueue<>();
+    private final Map<String, Runnable> keyCallbacks = new ConcurrentHashMap<>();
+    private volatile String theme = Color.WHITE;
     private final List<Runnable> tickListeners = new CopyOnWriteArrayList<>();
 
     // vyber oznacuje aktivni prvek a upravy se tykaji jen textoveho vstupu
@@ -452,6 +535,8 @@ public class MiniTui {
     // navratova hodnota zachova konkretni typ pridaneho prvku
     // prvni vhodny prvek se stane vybranym
     public <T extends Element> T add(T el) {
+        if (el instanceof Button button && button.colorCode == null) button.colorCode = theme;
+        if (el instanceof Input input) input.colorCode = theme;
         elements.add(el);
         if (focusedElement == null && el.focusable && el.z == currentZ && el.visible) {
             focusedElement = el;
@@ -469,6 +554,26 @@ public class MiniTui {
     // obnova rozhrani neposouva herni tah
     public void onTick(Runnable callback) {
         tickListeners.add(callback);
+    }
+
+    public void setTheme(String accent) {
+        theme = Objects.requireNonNull(accent);
+        for (Element element : elements) {
+            if (element instanceof Button button) button.colorCode = theme;
+            if (element instanceof Input input) input.colorCode = theme;
+        }
+    }
+
+    public String getTheme() { return theme; }
+
+    public void onKey(String key, Runnable callback) {
+        if (callback == null) keyCallbacks.remove(key);
+        else keyCallbacks.put(key, callback);
+    }
+
+    public void focus(Element element) {
+        if (element != null && elements.contains(element) && element.focusable
+                && element.visible && element.z == currentZ) focusedElement = element;
     }
 
     public void setStatus(String status) {
@@ -648,6 +753,12 @@ public class MiniTui {
             return;
         }
 
+        Runnable helpShortcut = key.equals("F1") ? keyCallbacks.get(key) : null;
+        if (helpShortcut != null) {
+            helpShortcut.run(); // napoveda funguje i pri rozepsanem jmenu
+            return;
+        }
+
         if (editing && focusedElement instanceof Input input) {
             if (key.equals("ENTER") || key.equals("ESC")) {
                 editing = false;
@@ -670,6 +781,12 @@ public class MiniTui {
             return;
         }
 
+        Runnable shortcut = keyCallbacks.get(key);
+        if (shortcut != null) {
+            shortcut.run();
+            return;
+        }
+
         // sipky vybiraji podle polohy prvku
         // strankovaci klavesy prepinaji sousedni obrazovku jen pokud obsahuje viditelny prvek
         switch (key) {
@@ -686,7 +803,7 @@ public class MiniTui {
             case "ENTER" -> {
                 if (focusedElement instanceof Input) {
                     editing = true;
-                } else if (focusedElement instanceof Button btn && btn.action != null) {
+                } else if (focusedElement instanceof Button btn && btn.enabled && btn.action != null) {
                     btn.action.run();
                 }
             }
@@ -757,7 +874,7 @@ public class MiniTui {
 
         // horni okraj meni barvu podle aktivni obrazovky
         String borderChar = (currentZ == 0) ? "-" : "~";
-        String borderColor = (currentZ == 0) ? Color.CYAN : Color.YELLOW;
+        String borderColor = theme;
         String topBorder = borderColor + (termWidth == 1 ? "+"
                 : "+" + borderChar.repeat(termWidth - 2) + "+") + Color.RESET;
         if (footerRow > 0) appendClipped(sb, topBorder, 0, 0, termWidth, footerRow);
@@ -775,12 +892,8 @@ public class MiniTui {
 
         // pravou dolni bunku nechavame prazdnou aby automaticke zalamovani neposunulo obrazovku
         int maxFooterWidth = Math.max(0, termWidth - 1);
-        String zTag = (currentZ == 0) ? " [HLAVNÍ] " : " [OBCHOD] ";
         String rawFooter = " " + statusText;
-        if (rawFooter.length() + zTag.length() < maxFooterWidth) {
-            rawFooter = rawFooter + " ".repeat(maxFooterWidth - rawFooter.length() - zTag.length()) + zTag;
-        }
-        appendClipped(sb, Color.apply(rawFooter, Color.REVERSE), 0, footerRow,
+        appendClipped(sb, Color.apply(rawFooter, Color.REVERSE, theme), 0, footerRow,
                 maxFooterWidth, termHeight);
 
         // pri upravach zobrazime skutecny kurzor za viditelnym koncem textu
@@ -807,6 +920,7 @@ public class MiniTui {
     }
 
     private int renderBoundary(Element element, int width) {
+        if (element instanceof Box) return width;
         for (Element other : elements) {
             if (other.z == currentZ && other.visible && other.y == element.y
                     && other.x > element.x && other.x < width) width = other.x;
@@ -962,7 +1076,9 @@ public class MiniTui {
                         case 'B' -> "DOWN";
                         case 'C' -> "RIGHT";
                         case 'D' -> "LEFT";
+                        case 'P' -> "F1";
                         case '~' -> switch (escape.substring(2, escape.length() - 1).split(";", 2)[0]) {
+                            case "11" -> "F1";
                             case "5" -> "PGUP";
                             case "6" -> "PGDN";
                             default -> null;
@@ -1128,6 +1244,7 @@ public class MiniTui {
                     case "Enter" -> "ENTER";
                     case "Escape" -> "ESC";
                     case "Backspace" -> "BACKSPACE";
+                    case "F1" -> "F1";
                     case "PageUp" -> "PGUP";
                     case "PageDown" -> "PGDN";
                     default -> character > 0 && Character.isValidCodePoint(character)

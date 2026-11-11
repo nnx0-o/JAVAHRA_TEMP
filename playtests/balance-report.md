@@ -1,5 +1,7 @@
 # First balance pass — 2026-11-11
 
+Historical snapshot: this report predates queued actions, stamina-costed repeatable Punch, and per-copy escalating reuse costs. Its match statistics do not measure the current redesigned rules.
+
 The default names are **Hráč 1** and **Hráč 2**. The game still starts with **15 gold**, awards **6 for winning / 9 for losing**, and uses **40 health / 12 base stamina**.
 
 ## How the games were played

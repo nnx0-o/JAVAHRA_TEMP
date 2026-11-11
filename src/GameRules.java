@@ -11,6 +11,8 @@ public final class GameRules {
     public static final int SHOP_SIZE = 10;
     public static final int WINS_REQUIRED = 3;
     public static final int BASIC_DAMAGE = 3;
+    public static final int BASIC_STAMINA_COST = 2;
+    public static final int BASIC_REPEAT_COST_INCREASE = 1;
     public static final int PREPARATION_TURNS = 2; // jeden vlastni tah kazdeho hrace
 
     private GameRules() {
