@@ -3,16 +3,21 @@ import java.util.List;
 import java.util.Random;
 
 public class Game {
-    public enum Phase { ANNOUNCEMENT, SHOP, COMBAT, RESULT, FINISHED }
 
-    // ------------------------------------ stav zapasu ------------------------------------
+    // ------------------------------------ faze zapasu ------------------------------------
+
+    public enum Phase {
+        ANNOUNCEMENT, SHOP, COMBAT, RESULT, FINISHED
+    }
+
+    // ------------------------------------ hraci, obchod, historie a stav zapasu ------------------------------------
 
     private final Player[] players;
     private final int[] wins = new int[2];
     private final Shop shop = new Shop();
     private final Random random;
     private final List<String> log = new ArrayList<>();
-    private GameText language = new GameText(false);
+    private final GameText text = new GameText();
     private Phase phase = Phase.ANNOUNCEMENT;
     private int shopStarter;
     private int current;
@@ -22,37 +27,98 @@ public class Game {
     private boolean traded;
     private int winner = -1;
 
+    // ------------------------------------ vytvoreni zapasu a losovani poradi ------------------------------------
+
     public Game(String firstName, String secondName, Random random) {
         this.random = random;
-        players = new Player[]{new Player(firstName), new Player(secondName)};
+        players = new Player[]{
+            new Player(firstName), new Player(secondName)
+        };
         shopStarter = random.nextInt(2); // dalsi souboje poradi otaceji
         current = shopStarter;
     }
 
-    public void setEnglish(boolean english) { language = new GameText(english); }
-    public Player getPlayer(int index) { return players[index]; }
-    public Player getCurrentPlayer() { return players[current]; }
-    public Player getOpponent() { return players[1 - current]; }
-    public int getCurrentIndex() { return current; }
-    public int getShopStarter() { return shopStarter; }
-    public int getCombatStarter() { return 1 - shopStarter; }
-    public int getBattle() { return battle; }
-    public int getTurn() { return turn; }
-    public int getCombatRound() { return Math.max(0, turn - GameRules.PREPARATION_TURNS) / 2 + 1; }
-    public int getTurnPosition() { return turn % 2 + 1; }
-    public int getWins(int index) { return wins[index]; }
-    public int getWinner() { return winner; }
-    public Shop getShop() { return shop; }
-    public Phase getPhase() { return phase; }
-    public List<String> getLog() { return List.copyOf(log); }
-    public boolean isPreparation() { return phase == Phase.COMBAT && turn < GameRules.PREPARATION_TURNS; }
-    public int getUnchangedVisits() { return unchangedVisits; }
-    public boolean willStartBattleOnContinue() { return phase == Phase.SHOP && !traded && unchangedVisits == 1; }
+    // ------------------------------------ cteni hracu, poradi, faze a vysledku ------------------------------------
 
-    private String text(String cs, String en) { return language.text(cs, en); }
-    private void report(String message) { log.add(message); }
+    public Player getPlayer(int index) {
+        return players[index];
+    }
 
-    // ------------------------------------ obchod ------------------------------------
+    public Player getCurrentPlayer() {
+        return players[current];
+    }
+
+    public Player getOpponent() {
+        return players[1 - current];
+    }
+
+    public int getCurrentIndex() {
+        return current;
+    }
+
+    public int getShopStarter() {
+        return shopStarter;
+    }
+
+    public int getCombatStarter() {
+        return 1 - shopStarter;
+    }
+
+    public int getBattle() {
+        return battle;
+    }
+
+    public int getTurn() {
+        return turn;
+    }
+
+    public int getCombatRound() {
+        return Math.max(0, turn - GameRules.PREPARATION_TURNS) / 2 + 1;
+    }
+
+    public int getTurnPosition() {
+        return turn % 2 + 1;
+    }
+
+    public int getWins(int index) {
+        return wins[index];
+    }
+
+    public int getWinner() {
+        return winner;
+    }
+
+    public Shop getShop() {
+        return shop;
+    }
+
+    public Phase getPhase() {
+        return phase;
+    }
+
+    public List<String> getLog() {
+        return List.copyOf(log);
+    }
+
+    public boolean isPreparation() {
+        return phase == Phase.COMBAT && turn < GameRules.PREPARATION_TURNS;
+    }
+
+    public int getUnchangedVisits() {
+        return unchangedVisits;
+    }
+
+    public boolean willStartBattleOnContinue() {
+        return phase == Phase.SHOP && !traded && unchangedVisits == 1;
+    }
+
+    // ------------------------------------ zapis do historie ------------------------------------
+
+    private void report(String message) {
+        log.add(message);
+    }
+
+    // ------------------------------------ otevreni obchodu, nakup, prodej a vybaveni ------------------------------------
 
     public void openShop() {
         if (phase != Phase.ANNOUNCEMENT) return;
@@ -61,37 +127,39 @@ public class Game {
         unchangedVisits = 0;
         traded = false;
         phase = Phase.SHOP;
-        report(text("Začíná obchod před soubojem ", "Shop opens before battle ") + battle + ".");
+        report("Začíná obchod před soubojem " + battle + ".");
     }
 
     public String buy(Item item) {
-        if (phase != Phase.SHOP) return text("Nakupovat lze pouze v obchodě.", "You can only buy in the shop.");
-        if (!shop.purchase(getCurrentPlayer(), item)) return text("Nákup se nezdařil: chybí zlato, místo nebo zásoba.", "Purchase failed: insufficient gold, inventory space or stock.");
+        if (phase != Phase.SHOP) return "Nakupovat lze pouze v obchodě.";
+        if (!shop.purchase(getCurrentPlayer(), item)) return "Nákup se nezdařil: chybí zlato, místo nebo zásoba.";
         traded = true;
-        String message = getCurrentPlayer().getName() + text(" kupuje: ", " buys: ") + language.name(item) + ".";
+        String message = getCurrentPlayer().getName() + " kupuje: " + text.name(item) + ".";
         report(message);
         return message;
     }
 
     public String sell(Item item) {
-        if (phase != Phase.SHOP) return text("Prodávat lze pouze v obchodě.", "You can only sell in the shop.");
-        if (!shop.sell(getCurrentPlayer(), item)) return text("Prodej se nezdařil. Po odebrání brašny se musí vše vejít.", "Sale failed. Your items must fit after removing a bag.");
+        if (phase != Phase.SHOP) return "Prodávat lze pouze v obchodě.";
+        if (!shop.sell(getCurrentPlayer(), item)) return "Prodej se nezdařil. Po odebrání brašny se musí vše vejít.";
         traded = true;
-        String message = getCurrentPlayer().getName() + text(" prodává: ", " sells: ") + language.name(item)
-                + text(" za ", " for ") + item.getPrice() / 2 + text(" zlata.", " gold.");
+        String message = getCurrentPlayer().getName() + " prodává: " + text.name(item)
+                + " za " + item.getPrice() / 2 + " zlata.";
         report(message);
         return message;
     }
 
     public String equip(Item item) {
-        if (phase != Phase.SHOP || item == null) return text("Vybavení lze měnit pouze v obchodě.", "Equipment can only be changed in the shop.");
+        if (phase != Phase.SHOP || item == null) return "Vybavení lze měnit pouze v obchodě.";
         Inventory inventory = getCurrentPlayer().getEquipment();
         Item next = inventory.isEquipped(item) ? null : item;
         boolean success = item.getItemType() == ItemType.ARMOR ? inventory.equipArmor(next)
                 : item.getItemType() == ItemType.TRINKET && inventory.equipTrinket(next);
-        if (!success) return text("Vybavení nelze změnit. Zkontroluj typ předmětu a kapacitu inventáře.", "Cannot change equipment. Check item type and inventory capacity.");
-        return next == null ? text("Předmět byl sundán.", "Item unequipped.") : text("Vybaveno: ", "Equipped: ") + language.name(item) + ".";
+        if (!success) return "Vybavení nelze změnit. Zkontroluj typ předmětu a kapacitu inventáře.";
+        return next == null ? "Předmět byl sundán." : "Vybaveno: " + text.name(item) + ".";
     }
+
+    // ------------------------------------ predani obchodu a rozhodnuti o zacatku boje ------------------------------------
 
     public void continueShop() {
         if (phase != Phase.SHOP) return;
@@ -101,21 +169,23 @@ public class Game {
         else current = 1 - current;
     }
 
-    // ------------------------------------ tahy a pasivni ucinky ------------------------------------
+    // ------------------------------------ zahajeni souboje ------------------------------------
 
     private void startBattle() {
         for (Player player : players) player.resetBattle();
         phase = Phase.COMBAT;
         turn = 0;
         current = getCombatStarter();
-        report(text("Souboj začíná. Každý má jeden přípravný tah bez útoků.", "Battle begins. Each player has one preparation turn without attacks."));
+        report("Souboj začíná. Každý má jeden přípravný tah bez útoků.");
         beginTurn();
     }
+
+    // ------------------------------------ zacatek tahu: vydrz, talisman a casovane ucinky ------------------------------------
 
     private void beginTurn() {
         Player actor = getCurrentPlayer();
         actor.beginTurn();
-        report((isPreparation() ? text("Příprava", "Preparation") : text("Kolo ", "Round ") + getCombatRound())
+        report((isPreparation() ? "Příprava" : "Kolo " + getCombatRound())
                 + " (" + getTurnPosition() + "): " + actor.getName() + ".");
         Item trinket = actor.getEquipment().getEquippedTrinket();
         if (trinket != null) {
@@ -131,25 +201,27 @@ public class Game {
                 case CLEANSE_FIRE -> cleansed = actor.cleanse(Damage.DamageType.FIRE, trinket.getPower());
                 default -> { }
             }
-            if (actor.getHealth() > before) report(language.name(trinket) + text(": obnoveno životů: ", ": health restored: ") + (actor.getHealth() - before) + ".");
-            if (cleansed > 0) report(language.name(trinket) + text(": odstraněné zbývající poškození: ", ": remaining damage removed: ") + cleansed + ".");
+            if (actor.getHealth() > before) report(text.name(trinket) + ": obnoveno životů: " + (actor.getHealth() - before) + ".");
+            if (cleansed > 0) report(text.name(trinket) + ": odstraněné zbývající poškození: " + cleansed + ".");
         }
         for (Damage effect : actor.getEffects()) {
             int amount = effect.takeTick(); // snimek drzi poradi i pri odstranovani ucinku
             if (effect.getType() == Damage.DamageType.HEAL) {
                 int before = actor.getHealth();
                 actor.heal(amount);
-                report(text("Postupné léčení: obnoveno životů: ", "Timed healing: health restored: ") + (actor.getHealth() - before) + ".");
+                report("Postupné léčení: obnoveno životů: " + (actor.getHealth() - before) + ".");
             } else {
                 int actual = actor.receiveDamage(amount, effect.getType());
-                report(language.damageType(effect.getType()) + ": " + actual
-                        + text(" poškození po obraně (před obranou ", " damage after defenses (before defenses ") + amount + ").");
+                report(text.damageType(effect.getType()) + ": " + actual
+                        + " poškození po obraně (před obranou " + amount + ").");
             }
             if (effect.getTimer() == 0) actor.removeEffect(effect);
             if (finishIfDefeated()) return;
         }
         actor.clearShield(); // predchozi stit kryje i uvodni davky
     }
+
+    // ------------------------------------ provedeni planu a predani tahu ------------------------------------
 
     public void endTurn() {
         if (phase != Phase.COMBAT) return;
@@ -160,32 +232,35 @@ public class Game {
             if (finishIfDefeated()) return;
         }
         turn++;
+        // Indexy hracu jsou 0 a 1; tento vyraz je vzajemne prohodi.
         current = 1 - current;
         beginTurn();
     }
 
-    // ------------------------------------ plan a rezervace vydrze ------------------------------------
+    // ------------------------------------ kontrola a pridani akce do planu ------------------------------------
 
     public String act(Player.Action action) {
-        if (phase != Phase.COMBAT) return text("Souboj nyní neprobíhá.", "No battle is in progress.");
-        if (action == null) return text("Vyber akci.", "Choose an action.");
+        if (phase != Phase.COMBAT) return "Souboj nyní neprobíhá.";
+        if (action == null) return "Vyber akci.";
         Player actor = getCurrentPlayer();
         Item item = action.item();
         boolean attack = action.basicAttack() || item != null && item.getItemType() == ItemType.DAMAGE;
-        if (attack && isPreparation()) return text("Přípravný tah: zatím nelze zasáhnout soupeře.", "Preparation: you cannot attack the opponent yet.");
+        if (attack && isPreparation()) return "Přípravný tah: zatím nelze zasáhnout soupeře.";
         if (!action.basicAttack()) {
-            if (item == null || !actor.getInventory().contains(item)) return text("Tento předmět nemáš v inventáři.", "This item is not in your inventory.");
-            if (item.isEquipment()) return text("Zbroj a talisman působí pasivně; mění se v obchodě.", "Armor and trinkets are passive; change them in the shop.");
+            if (item == null || !actor.getInventory().contains(item)) return "Tento předmět nemáš v inventáři.";
+            if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
             if (item.isConsumable() && actor.getActions().stream().anyMatch(a -> a.item() == item)) {
-                return text("Tento kus je již v plánu.", "This copy is already in your plan.");
+                return "Tento kus je již v plánu.";
             }
         }
         List<Player.Action> next = new ArrayList<>(actor.getActions());
         next.add(action);
-        if (!replacePlan(next)) return text("Nemáš dost výdrže.", "Not enough stamina.");
-        return text("Přidáno do plánu: ", "Added to plan: ") + actionName(action)
-                + text(". Provede se při ukončení tahu.", ". Resolves when you end your turn.");
+        if (!replacePlan(next)) return "Nemáš dost výdrže.";
+        return "Přidáno do plánu: " + actionName(action)
+                + ". Provede se při ukončení tahu.";
     }
+
+    // ------------------------------------ vypocet cen a rezervace vydrze ------------------------------------
 
     public int getActionCost(Player.Action action) {
         return actionCost(action, getCurrentPlayer().getActions());
@@ -197,6 +272,7 @@ public class Game {
         return actionCost(plan.get(index), plan.subList(0, index));
     }
 
+    // Porovnavame identitu kusu (==): dve stejne pojmenovane zbrane jsou ruzne kusy.
     private int actionCost(Player.Action action, List<Player.Action> earlier) {
         if (action == null || !action.basicAttack() && action.item() == null) return 0;
         int repeats = 0;
@@ -220,6 +296,8 @@ public class Game {
         return actor.replacePlan(next, planCost(actor.getActions()), planCost(next));
     }
 
+    // ------------------------------------ odebirani a presouvani naplanovanych akci ------------------------------------
+
     public boolean removePlannedAction(int index) {
         if (phase != Phase.COMBAT) return false;
         List<Player.Action> next = new ArrayList<>(getCurrentPlayer().getActions());
@@ -238,7 +316,11 @@ public class Game {
         return replacePlan(next);
     }
 
-    private String actionName(Player.Action action) { return language.name(action.basicAttack() ? null : action.item()); }
+    // ------------------------------------ nazev a provedeni jednotlive akce ------------------------------------
+
+    private String actionName(Player.Action action) {
+        return text.name(action.basicAttack() ? null : action.item());
+    }
 
     private void resolveAction(Player.Action action) {
         Player actor = getCurrentPlayer();
@@ -246,49 +328,51 @@ public class Game {
         Item item = action.item();
         if (action.basicAttack()) {
             int actual = target.receiveDamage(GameRules.BASIC_DAMAGE + attackBonus(actor), Damage.DamageType.PHYSICAL);
-            report(actor.getName() + " — " + language.name(null) + ": " + actual + text(" poškození po obraně.", " damage after defenses."));
+            report(actor.getName() + " — " + text.name(null) + ": " + actual + " poškození po obraně.");
             return;
         }
         switch (item.getItemType()) {
             case DAMAGE -> {
                 if (item.getDamageType() == Damage.DamageType.PHYSICAL) {
                     int actual = target.receiveDamage(item.getPower() + attackBonus(actor), item.getDamageType());
-                    report(language.name(item) + ": " + actual + text(" poškození po obraně.", " damage after defenses."));
+                    report(text.name(item) + ": " + actual + " poškození po obraně.");
                 } else {
                     Damage effect = new Damage(item.getDamageType(), item.getTotalPower(), item.getDuration());
                     target.addEffect(effect);
-                    report(language.name(item) + text(": přidán účinek — ", ": effect applied — ") + language.effect(effect) + ".");
+                    report(text.name(item) + ": přidán účinek — " + text.effect(effect) + ".");
                 }
             }
             case HEAL -> {
                 if (item.getDuration() == 1) {
                     int before = actor.getHealth();
                     actor.heal(item.getPower());
-                    report(language.name(item) + text(": obnoveno životů: ", ": health restored: ") + (actor.getHealth() - before) + ".");
+                    report(text.name(item) + ": obnoveno životů: " + (actor.getHealth() - before) + ".");
                 } else {
                     actor.addEffect(new Damage(Damage.DamageType.HEAL, item.getTotalPower(), item.getDuration()));
-                    report(language.name(item) + text(": léčení začne příští vlastní tah.", ": healing starts on your next turn."));
+                    report(text.name(item) + ": léčení začne příští vlastní tah.");
                 }
             }
             case DEFEND -> {
                 actor.addShield(item.getPower());
-                report(language.name(item) + text(": štít posílen o ", ": shield increased by ") + item.getPower() + ".");
+                report(text.name(item) + ": štít posílen o " + item.getPower() + ".");
             }
             case STAMINA -> {
                 actor.addNextStamina(item.getPower());
-                report(language.name(item) + text(": příští vlastní tah +", ": next own turn +") + item.getPower() + text(" výdrže.", " stamina."));
+                report(text.name(item) + ": příští vlastní tah +" + item.getPower() + " výdrže.");
             }
             default -> throw new IllegalStateException("Neznámá aktivní akce.");
         }
         if (item.isConsumable()) actor.removeFromInventory(item);
     }
 
+    // ------------------------------------ utocny bonus vybaveneho talismanu ------------------------------------
+
     private int attackBonus(Player player) {
         Item trinket = player.getEquipment().getEquippedTrinket();
         return trinket != null && trinket.getPassive() == Item.Passive.ATTACK_BONUS ? trinket.getPower() : 0;
     }
 
-    // ------------------------------------ vysledek ------------------------------------
+    // ------------------------------------ ukonceni souboje, odmeny a dalsi souboj ------------------------------------
 
     private boolean finishIfDefeated() {
         if (players[0].isAlive() && players[1].isAlive()) return false;
@@ -298,9 +382,9 @@ public class Game {
         players[winner].changeGold(GameRules.WIN_REWARD);
         players[1 - winner].changeGold(GameRules.LOSS_REWARD);
         phase = wins[winner] >= GameRules.WINS_REQUIRED ? Phase.FINISHED : Phase.RESULT;
-        report(text("Vítězí ", "Winner: ") + players[winner].getName() + ". "
-                + players[winner].getName() + ": +" + GameRules.WIN_REWARD + text(" zlata; ", " gold; ")
-                + players[1 - winner].getName() + ": +" + GameRules.LOSS_REWARD + text(" zlata.", " gold."));
+        report("Vítězí " + players[winner].getName() + ". "
+                + players[winner].getName() + ": +" + GameRules.WIN_REWARD + " zlata; "
+                + players[1 - winner].getName() + ": +" + GameRules.LOSS_REWARD + " zlata.");
         return true;
     }
 

@@ -16,7 +16,7 @@ public class TimedItemTest {
         Player target = game.getOpponent();
         Item poison = give(actor, "Morová hůl");
         check(poison.getPower() == 4 && poison.getDuration() == 3 && poison.getTotalPower() == 12, "poison rate and total");
-        GameText text = new GameText(false);
+        GameText text = new GameText();
         check(text.description(poison).startsWith("Poškození:\n  Jed: 4 × 3 (12)"), "explicit per-turn description");
         check(text.summary(poison).contains("4 × 3 (12)"), "compact rate description");
         check(text.effect(new Damage(Damage.DamageType.POISON, 12, 3)).equals("Jed: 4 × 3 (12)"), "same notation on statuses");
@@ -43,7 +43,7 @@ public class TimedItemTest {
         check(target.getEffects().size() == 1 && target.getEffects().get(0).getAmount() == 11,
                 "fire preserves remaining total after merge");
         Damage irregular = new Damage(Damage.DamageType.FIRE, 16, 3);
-        String description = new GameText(false).effect(irregular);
+        String description = new GameText().effect(irregular);
         check(description.equals("Oheň: 5 → 6 → 5 (16)"),
                 "irregular status does not promise a constant tick");
         game.endTurn(); game.endTurn();
@@ -56,7 +56,7 @@ public class TimedItemTest {
         Game game = activeGame(); Player actor = game.getCurrentPlayer();
         Item salve = give(actor, "Hojivá mast");
         check(salve.getPower() == 3 && salve.getTotalPower() == 9, "healing uses same rate convention");
-        GameText text = new GameText(false);
+        GameText text = new GameText();
         check(text.description(salve).startsWith("Léčení:\n  3 × 3 (9)"), "separate healing field");
         check(text.summary(salve).equals("Léčení 3 × 3 (9)"), "same healing row notation");
         check(text.effect(new Damage(Damage.DamageType.HEAL, 9, 3)).equals("Léčení: 3 × 3 (9)"), "same healing status notation");

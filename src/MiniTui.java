@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 // smycka bezi ve volajicim vlakne a vstupni vlakno pouze uklada klavesy do fronty
 public class MiniTui {
 
+    // ------------------------------------ barvy a ANSI styly ------------------------------------
+
     // barvy a styly jsou retezce ktere lze kombinovat pro nadpisy ramecky i vlastni prvky
     // podpora rozsirenych barev zavisi na terminalu
     public static final class Color {
@@ -121,6 +123,7 @@ public class MiniTui {
     }
 
     // ------------------------------------ prvky rozhrani ------------------------------------
+
     // vnorene staticke tridy lze vytvorit bez instance rozhrani a pozdeji zaregistrovat
     // souradnice x a y zacinaji nulou a z vybira obrazovku
     // viditelne prvky na aktivni obrazovce se vykresli a vybiratelne prijimaji ovladani
@@ -171,6 +174,8 @@ public class MiniTui {
         public abstract String render(boolean focused, boolean editing, int termWidth);
     }
 
+    // ------------------------------------ prvek: nadpis ------------------------------------
+
     // neinteraktivni nadpis s barevnou vyplni
     // kratsi konstruktor pouziva vychozi barvu
     public static class Title extends Element {
@@ -214,6 +219,8 @@ public class MiniTui {
             return colorCode + line + Color.RESET;
         }
     }
+
+    // ------------------------------------ prvek: ramecek ------------------------------------
 
     // ramecek se sklada z casti s absolutnim umistenim kurzoru
     // vnitrek nechava prostor dalsim prvkum
@@ -281,6 +288,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ prvek: neinteraktivni popisek ------------------------------------
+
     // obycejny text bez moznosti vyberu
     // hlavni trida muze menit jeho obsah pri zmene statistik nebo zpravy
     public static class Label extends Element {
@@ -311,6 +320,8 @@ public class MiniTui {
             return colorCode + fitCell(text, Math.max(0, termWidth - x - 1), false) + Color.RESET;
         }
     }
+
+    // ------------------------------------ prvek: uprava textu ------------------------------------
 
     // vstup oddeluje vyber klavesnici od rezimu uprav
     // enter prepina upravy a zpetne volani dostava aktualni text
@@ -390,6 +401,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ prvek: tlacitko a jeho akce ------------------------------------
+
     // akce tlacitka nema argumenty ani navratovou hodnotu
     // enter ji spusti ale samotne vykresleni nikdy neprovadi akci
     public static class Button extends Element {
@@ -429,6 +442,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ prvek: vybiratelny radek tabulky ------------------------------------
+
     // tabulkova radka zvyrazni pouze ukazatel a ponecha barvy jednotlivych sloupcu
     public static class TableRow extends Button {
         private final List<String> cells;
@@ -460,12 +475,15 @@ public class MiniTui {
                         .append(fitCell(cells.get(index), size, true)).append(Color.RESET);
                 available -= size;
                 if (available > 0 && index + 1 < cells.size()) {
-                    result.append(backgroundCode).append(' ').append(Color.RESET); available--;
+                    result.append(backgroundCode).append(' ').append(Color.RESET);
+                    available--;
                 }
             }
             return result.toString();
         }
     }
+
+    // ------------------------------------ oriznuti a doplneni textu na sirku bunky ------------------------------------
 
     // sirku pocitame ze zobrazitelnych bunek a z ansi prijimame pouze styly
     private static String fitCell(String text, int width, boolean pad) {
@@ -500,9 +518,11 @@ public class MiniTui {
     }
 
     // ------------------------------------ stav smycky ------------------------------------
+
     // seznam kopiruje pole pri zmene aby slo bezpecne pokracovat v prochazeni
     // cteni prvku je castejsi nez jejich pridavani
     private final List<Element> elements = new CopyOnWriteArrayList<>();
+
     // vstupni vlakno predava nazvy klaves do bezpecne fronty
     // hlavni smycka je vybira bez cekani a zustava nezavisla na cteni terminalu
     private final BlockingQueue<String> keyQueue = new LinkedBlockingQueue<>();
@@ -516,11 +536,13 @@ public class MiniTui {
     private volatile boolean editing = false;
     private volatile boolean running = false;
     private volatile int currentZ = 0;
+
     // sirka vyska a posun konzole se zverejni spolecne
     // novy snimek geometrie vynuti obnovu i po rychlem zmenseni a zvetseni
     private record TerminalGeometry(int width, int height, int left, int top) {}
     private volatile TerminalGeometry terminal = new TerminalGeometry(80, 24, 0, 0);
     private volatile String statusText = "Šipky: výběr | Enter: potvrdit | [ / ]: obrazovka | Ctrl+C: konec";
+
     // mezipamet pouziva pouze hlavni smycka
     // stejne snimky se znovu netisknou ale zpetna volani stale probihaji
     private String lastFrame = "";
@@ -531,6 +553,8 @@ public class MiniTui {
     private volatile Exception inputFailure;
     private String unixTerminalMode;
     private boolean terminalRestored;
+
+    // ------------------------------------ registrace a odstraneni prvku ------------------------------------
 
     // navratova hodnota zachova konkretni typ pridaneho prvku
     // prvni vhodny prvek se stane vybranym
@@ -550,6 +574,8 @@ public class MiniTui {
         editing = false;
     }
 
+    // ------------------------------------ obsluha obnovy, barev a klavesovych zkratek ------------------------------------
+
     // zaregistruje praci pred vykreslenim
     // obnova rozhrani neposouva herni tah
     public void onTick(Runnable callback) {
@@ -564,12 +590,16 @@ public class MiniTui {
         }
     }
 
-    public String getTheme() { return theme; }
+    public String getTheme() {
+        return theme;
+    }
 
     public void onKey(String key, Runnable callback) {
         if (callback == null) keyCallbacks.remove(key);
         else keyCallbacks.put(key, callback);
     }
+
+    // ------------------------------------ nastaveni vyberu a stavoveho radku ------------------------------------
 
     public void focus(Element element) {
         if (element != null && elements.contains(element) && element.focusable
@@ -583,6 +613,8 @@ public class MiniTui {
     public String getStatus() {
         return statusText;
     }
+
+    // ------------------------------------ cteni prvku, vyberu a rozmeru terminalu ------------------------------------
 
     // vrati nemenitelny snimek seznamu ale samotne prvky zustavaji menitelne
     public List<Element> getElements() {
@@ -610,6 +642,8 @@ public class MiniTui {
         return terminal.height();
     }
 
+    // ------------------------------------ prepinani vrstev ------------------------------------
+
     // zmena obrazovky ukonci upravy a znovu vybere vhodny prvek
     // funguje i pri opetovnem nastaveni stejne obrazovky
     public void setLayer(int z) {
@@ -622,6 +656,8 @@ public class MiniTui {
     public int getLayer() {
         return currentZ;
     }
+
+    // ------------------------------------ spusteni a ukonceni vstupni a vykreslovaci smycky ------------------------------------
 
     public void stop() {
         this.running = false;
@@ -711,6 +747,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ obnoveni puvodniho rezimu terminalu ------------------------------------
+
     private synchronized void restoreTerminal(boolean isWindows) {
         if (terminalRestored) return;
         terminalRestored = true;
@@ -744,6 +782,8 @@ public class MiniTui {
             if (interrupted) Thread.currentThread().interrupt();
         }
     }
+
+    // ------------------------------------ zpracovani klaves a uprava textoveho vstupu ------------------------------------
 
     // zpracuje sjednocene klavesy nezavisle na operacnim systemu
     // v rezimu uprav meni text a jinak vybira nebo aktivuje prvky
@@ -810,6 +850,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ vyber prvku podle vrstvy a smeru sipek ------------------------------------
+
     // obrazovka muze obsahovat jen popisky takze overujeme viditelnost a ne vybiratelnost
     private boolean hasElementsAtZ(int z) {
         return elements.stream().anyMatch(e -> e.z == z && e.visible);
@@ -859,6 +901,8 @@ public class MiniTui {
 
         if (best != null) focusedElement = best;
     }
+
+    // ------------------------------------ sestaveni snimku a tisk pouze pri zmene ------------------------------------
 
     // cely snimek vznikne v pameti a vytiskne se jednou pokud se zmenil
     private void renderScreen() {
@@ -919,6 +963,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ hranice prvku a orezani ANSI vystupu ------------------------------------
+
     private int renderBoundary(Element element, int width) {
         if (element instanceof Box) return width;
         for (Element other : elements) {
@@ -949,7 +995,10 @@ public class MiniTui {
                     String[] parts = args.split(";", -1);
                     int first = ansiParameter(parts, 0);
                     switch (command) {
-                        case 'H', 'f' -> { y = first - 1; x = ansiParameter(parts, 1) - 1; }
+                        case 'H', 'f' -> {
+                            y = first - 1;
+                            x = ansiParameter(parts, 1) - 1;
+                        }
                         case 'A' -> y -= first;
                         case 'B' -> y += first;
                         case 'C' -> x += first;
@@ -962,9 +1011,22 @@ public class MiniTui {
                 }
                 continue;
             }
-            if (codePoint == '\n') { y++; x = 0; positioned = false; continue; }
-            if (codePoint == '\r') { x = 0; positioned = false; continue; }
-            if (codePoint == '\t') { x += 8 - Math.floorMod(x, 8); positioned = false; continue; }
+            if (codePoint == '\n') {
+                y++;
+                x = 0;
+                positioned = false;
+                continue;
+            }
+            if (codePoint == '\r') {
+                x = 0;
+                positioned = false;
+                continue;
+            }
+            if (codePoint == '\t') {
+                x += 8 - Math.floorMod(x, 8);
+                positioned = false;
+                continue;
+            }
             if (Character.isISOControl(codePoint)) continue;
             int columns = displayColumns(codePoint);
             if (x >= 0 && x + columns <= right && y >= 0 && y < bottom
@@ -979,6 +1041,8 @@ public class MiniTui {
         }
         frame.append(Color.RESET);
     }
+
+    // ------------------------------------ cteni ANSI parametru a sirka Unicode znaku ------------------------------------
 
     private static int ansiParameter(String[] parts, int index) {
         if (index >= parts.length || parts[index].isEmpty()) return 1;
@@ -1004,6 +1068,7 @@ public class MiniTui {
     }
 
     // ------------------------------------ unixovy vstup ------------------------------------
+
     // prubezne cteni terminalu umozni ukoncit vlakno bez cekani na dalsi klavesu
     private void readUnixKeys() throws Exception {
         UnixKeyDecoder decoder = new UnixKeyDecoder(keyQueue::offer);
@@ -1035,7 +1100,9 @@ public class MiniTui {
         private int remainingBytes;
         private long deadline;
 
-        UnixKeyDecoder(Consumer<String> keys) { this.keys = keys; }
+        UnixKeyDecoder(Consumer<String> keys) {
+            this.keys = keys;
+        }
 
         void accept(int c, long now) {
             if (escape.isEmpty() && (remainingBytes > 0 || c >= 128)) {
@@ -1100,6 +1167,8 @@ public class MiniTui {
         }
     }
 
+    // ------------------------------------ zjisteni a ulozeni rozmeru terminalu ------------------------------------
+
     // prikaz stty vraci nejprve radky a potom sloupce
     // pri chybe zustane posledni znama velikost
     private void updateUnixTermSize() {
@@ -1123,6 +1192,8 @@ public class MiniTui {
         if (!next.equals(terminal)) terminal = next;
     }
 
+    // ------------------------------------ spousteni pomocnych prikazu s casovym limitem ------------------------------------
+
     private static String execSh(String cmd) throws IOException, InterruptedException {
         return runCommand(new ProcessBuilder("sh", "-c", cmd), 1000);
     }
@@ -1139,6 +1210,7 @@ public class MiniTui {
     }
 
     // ------------------------------------ vstup windows ------------------------------------
+
     // rozmery cteme primo z konzole protoze vystup powershellu je roura
     // stejny most funguje v klasicke konzoli i ve windows terminalu
     private static final String WINDOWS_CONSOLE_API = """

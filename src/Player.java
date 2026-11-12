@@ -5,14 +5,19 @@ import java.util.Set;
 
 public class Player {
 
-    // ------------------------------------ akce hrace ------------------------------------
+    // ------------------------------------ zaznam naplanovane akce ------------------------------------
 
     public record Action(Item item, boolean basicAttack) {
-        public static Action use(Item item) { return new Action(item, false); }
-        public static Action attack() { return new Action(null, true); }
+        public static Action use(Item item) {
+            return new Action(item, false);
+        }
+
+        public static Action attack() {
+            return new Action(null, true);
+        }
     }
 
-    // ------------------------------------ inicializace ------------------------------------
+    // ------------------------------------ jmeno, inventar a stav hrace ------------------------------------
 
     public static final int MAX_HEALTH = GameRules.MAX_HEALTH;
     private final String name;
@@ -22,46 +27,119 @@ public class Player {
     private int stamina;
     private int shield;
     private int nextStamina;
+
+    // ------------------------------------ plan tahu, pouzite predmety a casovane ucinky ------------------------------------
+
     private boolean basicAttackUsed;
     private final Set<Item> usedItems = new HashSet<>();
     private final List<Damage> effects = new ArrayList<>();
     private final List<Action> actions = new ArrayList<>();
 
+    // ------------------------------------ vytvoreni hrace ------------------------------------
+
     public Player(String name) {
         this.name = name == null || name.isBlank() ? "Hráč" : name.trim();
     }
 
-    // ------------------------------------ stav ------------------------------------
+    // ------------------------------------ cteni jmena, zdroju a bojoveho stavu ------------------------------------
 
-    public String getName() { return name; }
-    public int getGold() { return gold; }
-    public int getHealth() { return health; }
-    public int getStamina() { return stamina; }
-    public int getShield() { return shield; }
-    public int getNextStamina() { return nextStamina; }
-    public boolean isAlive() { return health > 0; }
-    public boolean hasUsed(Item item) { return usedItems.contains(item); }
-    public boolean hasUsedBasicAttack() { return basicAttackUsed; }
-    public List<Damage> getEffects() { return List.copyOf(effects); }
-    public List<Action> getActions() { return List.copyOf(actions); }
-    public Inventory getEquipment() { return inventory; }
-    public List<Item> getInventory() { return inventory.getItems(); }
-    public int getInventorySize() { return inventory.getCapacity(); }
-    public boolean addToInventory(Item item) { return inventory.add(item); }
-    public void removeFromInventory(Item item) { inventory.remove(item); }
-    public boolean setInventorySize(int newSize) { return inventory.setCapacity(newSize); }
-    public void resetInventory() { inventory.clear(); }
+    public String getName() {
+        return name;
+    }
 
-    public void changeGold(int amount) { gold = Math.max(0, gold + amount); }
-    public void takeDamage(int amount) { health = Math.max(0, health - Math.max(0, amount)); }
-    public void heal(int amount) { health = Math.min(MAX_HEALTH, health + Math.max(0, amount)); }
+    public int getGold() {
+        return gold;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public int getStamina() {
+        return stamina;
+    }
+
+    public int getShield() {
+        return shield;
+    }
+
+    public int getNextStamina() {
+        return nextStamina;
+    }
+
+    public boolean isAlive() {
+        return health > 0;
+    }
+
+    public boolean hasUsed(Item item) {
+        return usedItems.contains(item);
+    }
+
+    public boolean hasUsedBasicAttack() {
+        return basicAttackUsed;
+    }
+
+    // Kopie chrani seznam pred pridavanim zvenku; objekty ucinku zustavaji sdilene.
+    public List<Damage> getEffects() {
+        return List.copyOf(effects);
+    }
+
+    public List<Action> getActions() {
+        return List.copyOf(actions);
+    }
+
+    // ------------------------------------ pristup k inventari a zmena jeho obsahu ------------------------------------
+
+    public Inventory getEquipment() {
+        return inventory;
+    }
+
+    public List<Item> getInventory() {
+        return inventory.getItems();
+    }
+
+    public int getInventorySize() {
+        return inventory.getCapacity();
+    }
+
+    public boolean addToInventory(Item item) {
+        return inventory.add(item);
+    }
+
+    public void removeFromInventory(Item item) {
+        inventory.remove(item);
+    }
+
+    public boolean setInventorySize(int newSize) {
+        return inventory.setCapacity(newSize);
+    }
+
+    public void resetInventory() {
+        inventory.clear();
+    }
+
+    // ------------------------------------ zmena zlata a zdravi ------------------------------------
+
+    public void changeGold(int amount) {
+        gold = Math.max(0, gold + amount);
+    }
+
+    public void takeDamage(int amount) {
+        health = Math.max(0, health - Math.max(0, amount));
+    }
+
+    public void heal(int amount) {
+        health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
+    }
+
+    // ------------------------------------ maximalni vydrz podle zbroje ------------------------------------
 
     public int getMaxStamina() {
         Item armor = inventory.getEquippedArmor();
         return Math.max(0, GameRules.MAX_STAMINA - (armor == null ? 0 : armor.getStaminaPenalty()));
     }
 
-    // ------------------------------------ zacatek souboje a tahu ------------------------------------
+    // ------------------------------------ obnoveni stavu na zacatku souboje a tahu ------------------------------------
 
     public void resetBattle() {
         health = MAX_HEALTH;
@@ -82,16 +160,31 @@ public class Player {
         // stit se smaze az po uvodnich ucincich aby pokryl i prichozi jed a ohen
     }
 
-    public void clearShield() { shield = 0; }
-    public void addShield(int amount) { shield += Math.max(0, amount); }
-    public void addNextStamina(int amount) { nextStamina += Math.max(0, amount); }
-    public void addStamina(int amount) { stamina += Math.max(0, amount); }
+    // ------------------------------------ zmena stitu a vydrze ------------------------------------
+
+    public void clearShield() {
+        shield = 0;
+    }
+
+    public void addShield(int amount) {
+        shield += Math.max(0, amount);
+    }
+
+    public void addNextStamina(int amount) {
+        nextStamina += Math.max(0, amount);
+    }
+
+    public void addStamina(int amount) {
+        stamina += Math.max(0, amount);
+    }
 
     public boolean spendStamina(int amount) {
         if (amount < 0 || amount > stamina) return false;
         stamina -= amount;
         return true;
     }
+
+    // ------------------------------------ ulozeni planu a prepocet rezervovane vydrze ------------------------------------
 
     public void recordAction(Action action) {
         actions.add(action); // akce ceka na konec tahu
@@ -100,7 +193,8 @@ public class Player {
     }
 
     public boolean replacePlan(List<Action> plan, int previousCost, int nextCost) {
-        // rezervace se meni atomicky a odstranene akce vraceji vydrz
+        // Vydrz uz nezahrnuje stary plan. Jeho cenu vratime do rozpoctu a odecteme novou.
+        // Kdyz novy plan neprojde kontrolou, puvodni plan i vydrz zustanou beze zmeny.
         int budget = stamina + previousCost;
         if (nextCost < 0 || nextCost > budget) return false;
         stamina = budget - nextCost;
@@ -115,7 +209,7 @@ public class Player {
         return true;
     }
 
-    // ------------------------------------ stavy a obrana ------------------------------------
+    // ------------------------------------ pridavani, slucovani a ocista casovanych ucinku ------------------------------------
 
     public void addEffect(Damage effect) {
         if (effect.getType() == Damage.DamageType.FIRE) {
@@ -129,7 +223,10 @@ public class Player {
         effects.add(effect); // jedy a leceni maji samostatne casovace v poradi vzniku
     }
 
-    public void removeEffect(Damage effect) { effects.remove(effect); }
+    public void removeEffect(Damage effect) {
+        effects.remove(effect);
+    }
+
     public int cleanse(Damage.DamageType type, int budget) {
         int remaining = Math.max(0, budget);
         for (Damage effect : getEffects()) {
@@ -139,6 +236,8 @@ public class Player {
         }
         return Math.max(0, budget) - remaining;
     }
+
+    // ------------------------------------ prichozi poskozeni: zbroj, stit a zdravi ------------------------------------
 
     public int receiveDamage(int amount, Damage.DamageType type) {
         int reduced = Math.max(0, amount);
@@ -159,6 +258,8 @@ public class Player {
         takeDamage(reduced);
         return previous - health;
     }
+
+    // ------------------------------------ textovy vypis hrace ------------------------------------
 
     @Override
     public String toString() {

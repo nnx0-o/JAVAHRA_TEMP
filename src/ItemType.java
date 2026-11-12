@@ -1,6 +1,6 @@
 public enum ItemType {
 
-    // ------------------------------------ typy predmetu ------------------------------------
+    // ------------------------------------ dostupne hodnoty ------------------------------------
 
     DAMAGE("Zbraň"),
     HEAL("Léčení"),
@@ -9,11 +9,17 @@ public enum ItemType {
     ARMOR("Zbroj"),
     TRINKET("Talisman");
 
+    // ------------------------------------ cesky nazev ------------------------------------
+
     private final String label;
+
+    // ------------------------------------ vytvoreni hodnoty ------------------------------------
 
     ItemType(String label) {
         this.label = label;
     }
+
+    // ------------------------------------ cteni hodnoty a textovy vypis ------------------------------------
 
     @Override
     public String toString() {

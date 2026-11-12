@@ -103,7 +103,7 @@ public class MainUiTest {
 
         Main czech = new Main(); MiniTui czechTui = (MiniTui) field(czech, "tui");
         resize(czech, czechTui, 140, 42);
-        check(!has(czechTui, "English"), "English is not offered yet");
+        check(!has(czechTui, "English"), "Czech-only interface has no language selector");
         System.out.println("MainUiTest: OK (rendered frames in build/ui-snapshots)");
     }
 

@@ -20,7 +20,7 @@ public class Playtest {
         for (int index = 0; index < 2; index++) {
             Player player = game.getPlayer(index);
             System.out.println(player + " | Výhry: " + game.getWins(index));
-            System.out.println("  Účinky: " + player.getEffects().stream().map(new GameText(false)::effect).toList());
+            System.out.println("  Účinky: " + player.getEffects().stream().map(new GameText()::effect).toList());
             System.out.println("  Zbroj: " + itemName(player.getEquipment().getEquippedArmor())
                     + " | Talisman: " + itemName(player.getEquipment().getEquippedTrinket()));
         }
@@ -35,14 +35,14 @@ public class Playtest {
                     + (item.isConsumable() && game.getCurrentPlayer().hasUsed(item) ? " | Již v plánu" : ""));
         }
         if (game.getPhase() == Game.Phase.COMBAT) {
-            GameText language = new GameText(false);
+            GameText text = new GameText();
             System.out.println("Pěst | Výdrž dalšího použití: " + game.getActionCost(Player.Action.attack()));
             System.out.println("Plán akcí — vyhodnotí se shora dolů při ukončení tahu:");
             List<Player.Action> plan = game.getCurrentPlayer().getActions();
             if (plan.isEmpty()) System.out.println("  Zatím žádné akce.");
             for (int i = 0; i < plan.size(); i++) {
                 Player.Action action = plan.get(i);
-                System.out.println("  " + (i + 1) + ": " + language.name(action.basicAttack() ? null : action.item())
+                System.out.println("  " + (i + 1) + ": " + text.name(action.basicAttack() ? null : action.item())
                         + " | Rezervovaná výdrž: " + game.getPlannedActionCost(i));
             }
         }
@@ -102,10 +102,12 @@ public class Playtest {
                         else game.endTurn();
                     }
                     case "next" -> game.nextBattle();
-                    case "offer", "item" -> System.out.println(new GameText(false).description(select(parts[1], parts[0].equals("offer"))));
+                    case "offer", "item" -> System.out.println(new GameText().description(select(parts[1], parts[0].equals("offer"))));
                     case "log" -> game.getLog().forEach(System.out::println);
                     case "state" -> { }
-                    case "quit" -> { return; }
+                    case "quit" -> {
+                        return;
+                    }
                     default -> System.out.println("Neznámý příkaz.");
                 }
             } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException invalid) {

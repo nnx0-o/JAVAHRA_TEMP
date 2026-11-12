@@ -9,7 +9,7 @@ public final class QueuedCombatTest {
         lethalStopsQueue();
         preparationAndRounds();
         continuePrediction();
-        englishMessages();
+        czechMessages();
         System.out.println("QueuedCombatTest passed");
     }
 
@@ -141,14 +141,13 @@ public final class QueuedCombatTest {
         check(!game.willStartBattleOnContinue(), "trade resets consecutive unchanged visits");
     }
 
-    private static void englishMessages() {
+    private static void czechMessages() {
         Game game = game(true);
-        game.setEnglish(true);
-        check(game.act(Player.Action.attack()).contains("Added to plan: Punch"), "queue response localized");
+        check(game.act(Player.Action.attack()).contains("Přidáno do plánu: Pěst"), "queue response is Czech");
         game.getOpponent().takeDamage(39);
         game.endTurn();
         String reward = game.getLog().get(game.getLog().size() - 1);
-        check(reward.contains("Alice") && reward.contains("Bob") && reward.contains("gold"), "rewards name both players");
+        check(reward.contains("Alice") && reward.contains("Bob") && reward.contains("zlata"), "rewards name both players");
     }
 
     private static void check(boolean condition, String message) {

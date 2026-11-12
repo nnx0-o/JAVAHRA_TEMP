@@ -7,13 +7,22 @@ import java.util.Random;
 
 public class Shop {
 
-    // ------------------------------------ inicializace ------------------------------------
+    // ------------------------------------ sdilene zasoby a ceny nabidek ------------------------------------
 
     private final Map<Item, Integer> stock = new LinkedHashMap<>();
     private final Map<Item, Integer> prices = new LinkedHashMap<>();
 
-    public Map<Item, Integer> getStock() { return Collections.unmodifiableMap(stock); }
-    public int getPrice(Item item) { return prices.getOrDefault(item, -1); }
+    // ------------------------------------ cteni nabidky a cen ------------------------------------
+
+    public Map<Item, Integer> getStock() {
+        return Collections.unmodifiableMap(stock);
+    }
+
+    public int getPrice(Item item) {
+        return prices.getOrDefault(item, -1);
+    }
+
+    // ------------------------------------ nahodne obnoveni nabidky a vahy vyberu ------------------------------------
 
     public void refresh(Random random) {
         stock.clear();
@@ -42,7 +51,7 @@ public class Shop {
         return item.getRarity().getWeight() * multiplier;
     }
 
-    // ------------------------------------ obchodovani ------------------------------------
+    // ------------------------------------ pridani nabidky a odebrani kusu ze skladu ------------------------------------
 
     public boolean addItem(Item item, int price, int quantity) {
         if (item == null || price < 0 || quantity < 0) return false;
@@ -56,6 +65,8 @@ public class Shop {
         stock.put(item, stock.get(item) - quantity);
         return true;
     }
+
+    // ------------------------------------ nakup do inventare a prodej predmetu ------------------------------------
 
     public boolean purchase(Player player, Item item) {
         int price = getPrice(item);

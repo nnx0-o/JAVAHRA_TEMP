@@ -3,18 +3,25 @@ import java.util.List;
 
 public final class ItemCatalog {
 
-    // ------------------------------------ katalog ------------------------------------
+    // ------------------------------------ sdileny seznam definic predmetu ------------------------------------
 
     private static final List<Item> ITEMS = createItems();
+
+    // ------------------------------------ pristup ke katalogu ------------------------------------
 
     private ItemCatalog() {
     }
 
-    public static List<Item> getItems() { return ITEMS; }
+    public static List<Item> getItems() {
+        return ITEMS;
+    }
+
+    // ------------------------------------ sestaveni katalogu podle kategorii ------------------------------------
 
     private static List<Item> createItems() {
         List<Item> items = new ArrayList<>();
         // casovane zbrane maji silu za kazdy vlastni tah cile a pocet techto tahu
+        // fyzicke zbrane
         weapon(items, "Dýka", 3, 2, 4, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 2, 3);
         weapon(items, "Krátký meč", 4, 3, 6, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
         weapon(items, "Tesák", 5, 3, 7, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 2);
@@ -27,12 +34,14 @@ public final class ItemCatalog {
         weapon(items, "Obouruční meč", 12, 8, 19, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Mistrovská čepel", 14, 5, 13, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Železný palcát", 4, 4, 8, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
+        // ohnive zbrane
         weapon(items, "Pochodeň", 3, 2, 2, 3, Damage.DamageType.FIRE, Rarity.COMMON, 2, 3);
         weapon(items, "Žhavý prut", 5, 3, 4, 3, Damage.DamageType.FIRE, Rarity.COMMON, 1, 2);
         weapon(items, "Plamenná hůl", 7, 4, 4, 4, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
         weapon(items, "Ohnivá čepel", 9, 5, 6, 3, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 1);
         weapon(items, "Dračí žezlo", 13, 7, 6, 4, Damage.DamageType.FIRE, Rarity.RARE, 1, 1);
         weapon(items, "Jiskřící hůlka", 6, 2, 4, 2, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
+        // jedove zbrane
         weapon(items, "Jedovatá jehla", 3, 2, 2, 3, Damage.DamageType.POISON, Rarity.COMMON, 2, 3);
         weapon(items, "Hadí dýka", 5, 3, 2, 4, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
         weapon(items, "Morová hůl", 7, 4, 4, 3, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 2);
@@ -110,7 +119,7 @@ public final class ItemCatalog {
         return List.copyOf(items); // 76 definic a kazdy nakup z nich vytvori novy kus
     }
 
-    // ------------------------------------ tvorba popisu ------------------------------------
+    // ------------------------------------ vytvareni zbrani ------------------------------------
 
     private static void weapon(List<Item> items, String name, int price, int cost, int power,
             int duration, Damage.DamageType type, Rarity rarity, int min, int max) {
@@ -123,6 +132,8 @@ public final class ItemCatalog {
                 Item.Passive.NONE, 0, 0, description + " Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže."));
     }
 
+    // ------------------------------------ vytvareni lecivych predmetu ------------------------------------
+
     private static void heal(List<Item> items, String name, int price, int cost, int power,
             int duration, Rarity rarity, int min, int max) {
         String health = power + (power == 1 ? " život" : power <= 4 ? " životy" : " životů");
@@ -133,12 +144,16 @@ public final class ItemCatalog {
                 + ", nejvýše do maxima. Cena: " + cost + " výdrže. Po použití se spotřebuje."));
     }
 
+    // ------------------------------------ vytvareni predmetu pro obnovu vydrze ------------------------------------
+
     private static void stamina(List<Item> items, String name, int price, int cost, int power,
             Rarity rarity, int min, int max) {
         items.add(new Item(ItemType.STAMINA, name, price, cost, power, 1, Damage.DamageType.PHYSICAL,
                 rarity, min, max, Item.Passive.NONE, 0, 0, "Na začátku příštího vlastního tahu přidá "
                 + power + " výdrže nad běžné maximum. Nyní stojí " + cost + " výdrže. Spotřebuje se; bonusy se sčítají."));
     }
+
+    // ------------------------------------ vytvareni stitu ------------------------------------
 
     private static void shield(List<Item> items, String name, int price, int cost, int power,
             Rarity rarity, int min, int max) {
@@ -147,6 +162,8 @@ public final class ItemCatalog {
                 + " poškození všech typů po zbroji. Platí ihned až do konce úvodních účinků příštího vlastního tahu. "
                 + "Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže. Štíty se sčítají."));
     }
+
+    // ------------------------------------ vytvareni procentualni a prahove zbroje ------------------------------------
 
     private static void armor(List<Item> items, String name, int price, int percent,
             Damage.DamageType type, int penalty, Rarity rarity) {
@@ -164,6 +181,8 @@ public final class ItemCatalog {
                 + " z každého zásahu libovolného typu o síle " + condition + threshold
                 + " před štítem; vždy projde alespoň polovina zásahu zaokrouhlená na nejbližší celé číslo. Snížení základní výdrže: " + penalty + ". Lze nosit jednu zbroj."));
     }
+
+    // ------------------------------------ vytvareni talismanu ------------------------------------
 
     private static void trinket(List<Item> items, String name, int price, int power,
             Item.Passive passive, Rarity rarity, String description) {

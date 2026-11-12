@@ -1,6 +1,6 @@
 public class Damage {
 
-    // ------------------------------------ typy poskozeni ------------------------------------
+    // ------------------------------------ typ ucinku a jeho cesky nazev ------------------------------------
 
     public enum DamageType {
         PHYSICAL("Fyzické"),
@@ -14,17 +14,21 @@ public class Damage {
             this.label = label;
         }
 
-        @Override
+        // ------------------------------------ textovy vypis ucinku ------------------------------------
+
+    @Override
         public String toString() {
             return label;
         }
     }
 
-    // ------------------------------------ inicializace ------------------------------------
+    // ------------------------------------ zbyvajici sila a pocet tahu ------------------------------------
 
     private final DamageType type;
     private int amount; // celkovy zbytek ucinku a ne poskozeni za jeden tah
     private int timer;
+
+    // ------------------------------------ vytvoreni a kontrola ucinku ------------------------------------
 
     public Damage(DamageType type, int amount) {
         this(type, amount, 1);
@@ -39,7 +43,7 @@ public class Damage {
         this.timer = timer;
     }
 
-    // ------------------------------------ rozdeleni ucinku ------------------------------------
+    // ------------------------------------ cteni aktualniho stavu ucinku ------------------------------------
 
     public DamageType getType() {
         return type;
@@ -52,6 +56,8 @@ public class Damage {
     public int getTimer() {
         return timer;
     }
+
+    // ------------------------------------ vypocet a spotrebovani jedne davky ------------------------------------
 
     public int nextAmount() {
         return timer == 0 ? 0 : (int) Math.round((double) amount / timer);
@@ -71,6 +77,8 @@ public class Damage {
         takeTick();
         return true;
     }
+
+    // ------------------------------------ ocista a slouceni ohne ------------------------------------
 
     public int reduceRemaining(int maximum) {
         int removed = Math.min(amount, Math.max(0, maximum));

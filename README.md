@@ -1,6 +1,6 @@
 # Duel 1V1
 
-Lokální hra pro dva hráče u jedné klávesnice. Nakupte vybavení, naplánujte akce a vyhrajte tři souboje. Rozhraní, předměty, popisy i návod jsou v češtině. Angličtina zatím není v nabídce.
+Lokální hra pro dva hráče u jedné klávesnice. Nakupte vybavení, naplánujte akce a vyhrajte tři souboje. Rozhraní, předměty, popisy i návod jsou v češtině.
 
 ## Spuštění
 

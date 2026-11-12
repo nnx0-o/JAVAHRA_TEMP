@@ -1,6 +1,6 @@
 public class Item {
 
-    // ------------------------------------ pasivni ucinky ------------------------------------
+    // ------------------------------------ druhy pasivnich ucinku ------------------------------------
 
     public enum Passive {
         NONE,
@@ -15,7 +15,7 @@ public class Item {
         LARGE_HIT_BLOCK
     }
 
-    // ------------------------------------ inicializace ------------------------------------
+    // ------------------------------------ nemenne vlastnosti jednoho predmetu ------------------------------------
 
     private final ItemType itemType;
     private final String name;
@@ -32,6 +32,8 @@ public class Item {
     private final int threshold;
     private final int staminaPenalty;
     private final String description;
+
+    // ------------------------------------ vytvoreni predmetu a kontrola hodnot ------------------------------------
 
     public Item(ItemType itemType, String name) {
         this(itemType, name, 0, 0, 0, 1, Damage.DamageType.PHYSICAL,
@@ -74,14 +76,34 @@ public class Item {
         this.description = description;
     }
 
-    // ------------------------------------ vlastnosti ------------------------------------
+    // ------------------------------------ cteni typu, jmena, ceny a sily ------------------------------------
 
-    public ItemType getItemType() { return itemType; }
-    public String getName() { return name; }
-    public int getPrice() { return price; }
-    public int getStaminaCost() { return staminaCost; }
-    public int getRepeatCostIncrease() { return repeatCostIncrease; }
-    public int getPower() { return power; } // u casovaneho ucinku jde o silu jedne davky
+    public ItemType getItemType() {
+        return itemType;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getPrice() {
+        return price;
+    }
+
+    public int getStaminaCost() {
+        return staminaCost;
+    }
+
+    public int getRepeatCostIncrease() {
+        return repeatCostIncrease;
+    }
+
+    public int getPower() {
+        return power;
+    } // u casovaneho ucinku jde o silu jedne davky
+
+    // ------------------------------------ rozpoznani casovaneho ucinku a jeho celkova sila ------------------------------------
+
     public boolean hasTimedEffect() {
         return itemType == ItemType.DAMAGE && damageType != Damage.DamageType.PHYSICAL
                 || itemType == ItemType.HEAL && duration > 1;
@@ -91,15 +113,46 @@ public class Item {
     public int getTotalPower() {
         return hasTimedEffect() ? Math.multiplyExact(power, duration) : power;
     }
-    public int getDuration() { return duration; }
-    public Damage.DamageType getDamageType() { return damageType; }
-    public Rarity getRarity() { return rarity; }
-    public int getMinStock() { return minStock; }
-    public int getMaxStock() { return maxStock; }
-    public Passive getPassive() { return passive; }
-    public int getThreshold() { return threshold; }
-    public int getStaminaPenalty() { return staminaPenalty; }
-    public String getDescription() { return description; }
+
+    // ------------------------------------ cteni trvani, rarity, zasoby a pasivnich vlastnosti ------------------------------------
+
+    public int getDuration() {
+        return duration;
+    }
+
+    public Damage.DamageType getDamageType() {
+        return damageType;
+    }
+
+    public Rarity getRarity() {
+        return rarity;
+    }
+
+    public int getMinStock() {
+        return minStock;
+    }
+
+    public int getMaxStock() {
+        return maxStock;
+    }
+
+    public Passive getPassive() {
+        return passive;
+    }
+
+    public int getThreshold() {
+        return threshold;
+    }
+
+    public int getStaminaPenalty() {
+        return staminaPenalty;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    // ------------------------------------ rozliseni spotrebnich predmetu a vybaveni ------------------------------------
 
     public boolean isConsumable() {
         return itemType == ItemType.HEAL || itemType == ItemType.STAMINA;
@@ -109,11 +162,15 @@ public class Item {
         return itemType == ItemType.ARMOR || itemType == ItemType.TRINKET;
     }
 
+    // ------------------------------------ kopie pro samostatny fyzicky kus ------------------------------------
+
     public Item copy() {
         // kazdy koupeny kus ma vlastni identitu i kdyz pochazi ze stejne nabidky
         return new Item(itemType, name, price, staminaCost, power, duration, damageType,
                 rarity, minStock, maxStock, passive, threshold, staminaPenalty, description, repeatCostIncrease);
     }
+
+    // ------------------------------------ textovy vypis predmetu ------------------------------------
 
     @Override
     public String toString() {
