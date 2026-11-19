@@ -3,6 +3,12 @@ import java.util.List;
 
 public final class ItemCatalog {
 
+    // ------------------------------------ trvala zbran kazdeho hrace ------------------------------------
+
+    public static final Item FIST = new Item(ItemType.DAMAGE, "Pěst", 0,
+            GameRules.BASIC_STAMINA_COST, GameRules.BASIC_DAMAGE, 1, Damage.DamageType.PHYSICAL,
+            Rarity.COMMON, 1, 1, Item.Passive.NONE);
+
     // ------------------------------------ sdileny seznam definic predmetu ------------------------------------
 
     private static final List<Item> ITEMS = createItems();
@@ -34,13 +40,6 @@ public final class ItemCatalog {
         weapon(items, "Obouruční meč", 12, 8, 19, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Mistrovská čepel", 14, 5, 13, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Železný palcát", 4, 4, 8, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
-        // ohnive zbrane
-        weapon(items, "Pochodeň", 3, 2, 2, 3, Damage.DamageType.FIRE, Rarity.COMMON, 2, 3);
-        weapon(items, "Žhavý prut", 5, 3, 4, 3, Damage.DamageType.FIRE, Rarity.COMMON, 1, 2);
-        weapon(items, "Plamenná hůl", 7, 4, 4, 4, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
-        weapon(items, "Ohnivá čepel", 9, 5, 6, 3, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 1);
-        weapon(items, "Dračí žezlo", 13, 7, 6, 4, Damage.DamageType.FIRE, Rarity.RARE, 1, 1);
-        weapon(items, "Jiskřící hůlka", 6, 2, 4, 2, Damage.DamageType.FIRE, Rarity.UNCOMMON, 1, 2);
         // jedove zbrane
         weapon(items, "Jedovatá jehla", 3, 2, 2, 3, Damage.DamageType.POISON, Rarity.COMMON, 2, 3);
         weapon(items, "Hadí dýka", 5, 3, 2, 4, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
@@ -83,110 +82,60 @@ public final class ItemCatalog {
         shield(items, "Královská pavéza", 16, 7, 13, Rarity.RARE, 1, 1);
         shield(items, "Kožený štít", 4, 3, 3, Rarity.COMMON, 1, 3);
 
-        armor(items, "Prošívanice", 4, 15, Damage.DamageType.PHYSICAL, 0, Rarity.COMMON);
-        armor(items, "Kožená zbroj", 6, 25, Damage.DamageType.PHYSICAL, 0, Rarity.COMMON);
-        armor(items, "Kroužková košile", 8, 35, Damage.DamageType.PHYSICAL, 1, Rarity.UNCOMMON);
-        armor(items, "Plátová zbroj", 11, 40, Damage.DamageType.PHYSICAL, 2, Rarity.UNCOMMON);
-        armor(items, "Rytířská zbroj", 15, 50, Damage.DamageType.PHYSICAL, 3, Rarity.RARE);
-        armor(items, "Žáruvzdorný plášť", 6, 35, Damage.DamageType.FIRE, 0, Rarity.COMMON);
-        armor(items, "Dračí šupiny", 12, 60, Damage.DamageType.FIRE, 1, Rarity.RARE);
-        armor(items, "Alchymistický kabát", 6, 35, Damage.DamageType.POISON, 0, Rarity.COMMON);
-        armor(items, "Morový hábit", 12, 60, Damage.DamageType.POISON, 1, Rarity.RARE);
-        thresholdArmor(items, "Zpevněná vesta", 7, 2, 5, Item.Passive.SMALL_HIT_BLOCK, 0);
-        thresholdArmor(items, "Nárazová zbroj", 10, 4, 9, Item.Passive.LARGE_HIT_BLOCK, 1);
-        thresholdArmor(items, "Strážní kabát", 9, 3, 6, Item.Passive.SMALL_HIT_BLOCK, 1);
+        armor(items, "Prošívanice", 4, 15, Damage.DamageType.PHYSICAL, Rarity.COMMON);
+        armor(items, "Kožená zbroj", 6, 25, Damage.DamageType.PHYSICAL, Rarity.COMMON);
+        armor(items, "Kroužková košile", 8, 35, Damage.DamageType.PHYSICAL, Rarity.UNCOMMON);
+        armor(items, "Plátová zbroj", 11, 40, Damage.DamageType.PHYSICAL, Rarity.UNCOMMON);
+        armor(items, "Rytířská zbroj", 15, 50, Damage.DamageType.PHYSICAL, Rarity.RARE);
+        armor(items, "Alchymistický kabát", 6, 35, Damage.DamageType.POISON, Rarity.COMMON);
+        armor(items, "Morový hábit", 12, 60, Damage.DamageType.POISON, Rarity.RARE);
 
-        trinket(items, "Prsten obnovy", 6, 1, Item.Passive.REGENERATION, Rarity.UNCOMMON,
-                "Na začátku vlastního tahu obnoví 1 život.");
-        trinket(items, "Srdce poutníka", 6, 3, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON,
-                "Na začátku vlastního tahu obnoví 3 životy, pokud máš méně než polovinu života.");
-        trinket(items, "Fénixův přívěsek", 12, 4, Item.Passive.LOW_HEALTH_HEAL, Rarity.RARE,
-                "Na začátku vlastního tahu obnoví 4 životy, pokud máš méně než polovinu života.");
-        trinket(items, "Prsten výdrže", 8, 2, Item.Passive.STAMINA_BONUS, Rarity.UNCOMMON,
-                "Na začátku vlastního tahu přidá 2 výdrže nad běžné maximum.");
-        trinket(items, "Válečníkův amulet", 10, 2, Item.Passive.ATTACK_BONUS, Rarity.UNCOMMON,
-                "Každý fyzický útok včetně základního způsobí o 2 poškození více před obranou cíle.");
-        trinket(items, "Hadí kámen", 7, 3, Item.Passive.CLEANSE_POISON, Rarity.UNCOMMON,
-                "Na začátku vlastního tahu odstraní celkem až 3 zbývajícího poškození jedem před jeho působením, od nejstaršího jedu.");
-        trinket(items, "Kapka deště", 7, 3, Item.Passive.CLEANSE_FIRE, Rarity.UNCOMMON,
-                "Na začátku vlastního tahu odstraní až 3 zbývajícího poškození ohněm před jeho působením.");
-        trinket(items, "Cestovní brašna", 4, 3, Item.Passive.CAPACITY, Rarity.COMMON,
-                "Při vybavení přidá 3 místa v inventáři. Zabírá místo talismanu i jedno místo v inventáři.");
-        trinket(items, "Velký batoh", 7, 6, Item.Passive.CAPACITY, Rarity.COMMON,
-                "Při vybavení přidá 6 míst v inventáři. Před sundáním musí obsah vejít do menší kapacity.");
-        trinket(items, "Jantarová brož", 5, 2, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON,
-                "Na začátku vlastního tahu obnoví 2 životy před časovanými účinky, pokud máš méně než polovinu života.");
-        return List.copyOf(items); // 76 definic a kazdy nakup z nich vytvori novy kus
+        trinket(items, "Prsten obnovy", 6, 1, Item.Passive.REGENERATION, Rarity.UNCOMMON);
+        trinket(items, "Srdce poutníka", 6, 3, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON);
+        trinket(items, "Fénixův přívěsek", 12, 4, Item.Passive.LOW_HEALTH_HEAL, Rarity.RARE);
+        trinket(items, "Prsten výdrže", 8, 2, Item.Passive.STAMINA_BONUS, Rarity.UNCOMMON);
+        trinket(items, "Válečníkův amulet", 10, 2, Item.Passive.ATTACK_BONUS, Rarity.UNCOMMON);
+        trinket(items, "Hadí kámen", 7, 3, Item.Passive.CLEANSE_POISON, Rarity.UNCOMMON);
+        trinket(items, "Jantarová brož", 5, 2, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON);
+        return List.copyOf(items); // Kazdy nakup vytvori samostatny fyzicky kus.
     }
 
-    // ------------------------------------ vytvareni zbrani ------------------------------------
+    // ------------------------------------ vytvareni jednotlivych kategorii predmetu ------------------------------------
 
+    // Popisy se skladaji v GameText primo z techto hodnot; neukladame druhou kopii textu.
     private static void weapon(List<Item> items, String name, int price, int cost, int power,
             int duration, Damage.DamageType type, Rarity rarity, int min, int max) {
-        String description = type == Damage.DamageType.PHYSICAL
-                ? "Při provedení plánu způsobí " + power + " fyzického poškození."
-                : type + ": " + power + " poškození po dobu " + duration + " tahů (celkem " + power * duration
-                        + "). Působí na začátku soupeřova tahu, poprvé po provedení plánu. "
-                        + (type == Damage.DamageType.FIRE ? "Oheň se slučuje a zachovává celkový zbytek." : "Každý jed působí samostatně.");
-        items.add(new Item(ItemType.DAMAGE, name, price, cost, power, duration, type, rarity, min, max,
-                Item.Passive.NONE, 0, 0, description + " Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže."));
+        items.add(new Item(ItemType.DAMAGE, name, price, cost, power, duration, type,
+                rarity, min, max, Item.Passive.NONE));
     }
-
-    // ------------------------------------ vytvareni lecivych predmetu ------------------------------------
 
     private static void heal(List<Item> items, String name, int price, int cost, int power,
             int duration, Rarity rarity, int min, int max) {
-        String health = power + (power == 1 ? " život" : power <= 4 ? " životy" : " životů");
-        String effect = duration == 1 ? "Při provedení plánu obnoví " + health
-                : "Obnoví " + health + " za tah po dobu " + duration + " tahů (celkem " + power * duration + "), od příštího vlastního tahu";
         items.add(new Item(ItemType.HEAL, name, price, cost, power, duration, Damage.DamageType.HEAL,
-                rarity, min, max, Item.Passive.NONE, 0, 0, effect
-                + ", nejvýše do maxima. Cena: " + cost + " výdrže. Po použití se spotřebuje."));
+                rarity, min, max, Item.Passive.NONE));
     }
-
-    // ------------------------------------ vytvareni predmetu pro obnovu vydrze ------------------------------------
 
     private static void stamina(List<Item> items, String name, int price, int cost, int power,
             Rarity rarity, int min, int max) {
         items.add(new Item(ItemType.STAMINA, name, price, cost, power, 1, Damage.DamageType.PHYSICAL,
-                rarity, min, max, Item.Passive.NONE, 0, 0, "Na začátku příštího vlastního tahu přidá "
-                + power + " výdrže nad běžné maximum. Nyní stojí " + cost + " výdrže. Spotřebuje se; bonusy se sčítají."));
+                rarity, min, max, Item.Passive.NONE));
     }
-
-    // ------------------------------------ vytvareni stitu ------------------------------------
 
     private static void shield(List<Item> items, String name, int price, int cost, int power,
             Rarity rarity, int min, int max) {
         items.add(new Item(ItemType.DEFEND, name, price, cost, power, 1, Damage.DamageType.PHYSICAL,
-                rarity, min, max, Item.Passive.NONE, 0, 0, "Pohltí celkem až " + power
-                + " poškození všech typů po zbroji. Platí ihned až do konce úvodních účinků příštího vlastního tahu. "
-                + "Cena: " + cost + " výdrže. Zůstává; opakované použití v témže tahu stojí více výdrže. Štíty se sčítají."));
+                rarity, min, max, Item.Passive.NONE));
     }
-
-    // ------------------------------------ vytvareni procentualni a prahove zbroje ------------------------------------
 
     private static void armor(List<Item> items, String name, int price, int percent,
-            Damage.DamageType type, int penalty, Rarity rarity) {
-        items.add(new Item(ItemType.ARMOR, name, price, 0, percent, 1, type, rarity, 1, 2,
-                Item.Passive.NONE, 0, penalty, "Při vybavení sníží poškození typu " + type + " o " + percent
-                + " %. Výsledek se zaokrouhlí na nejbližší celé číslo. Snížení základní výdrže: " + penalty
-                + ". Platí i na jednotlivé dávky účinků. Lze nosit jednu zbroj."));
+            Damage.DamageType type, Rarity rarity) {
+        items.add(new Item(ItemType.ARMOR, name, price, 0, percent, 1, type,
+                rarity, 1, 2, Item.Passive.NONE));
     }
-
-    private static void thresholdArmor(List<Item> items, String name, int price, int power,
-            int threshold, Item.Passive passive, int penalty) {
-        String condition = passive == Item.Passive.SMALL_HIT_BLOCK ? "nejvýše " : "alespoň ";
-        items.add(new Item(ItemType.ARMOR, name, price, 0, power, 1, Damage.DamageType.PHYSICAL,
-                Rarity.UNCOMMON, 1, 2, passive, threshold, penalty, "Při vybavení odečte " + power
-                + " z každého zásahu libovolného typu o síle " + condition + threshold
-                + " před štítem; vždy projde alespoň polovina zásahu zaokrouhlená na nejbližší celé číslo. Snížení základní výdrže: " + penalty + ". Lze nosit jednu zbroj."));
-    }
-
-    // ------------------------------------ vytvareni talismanu ------------------------------------
 
     private static void trinket(List<Item> items, String name, int price, int power,
-            Item.Passive passive, Rarity rarity, String description) {
+            Item.Passive passive, Rarity rarity) {
         items.add(new Item(ItemType.TRINKET, name, price, 0, power, 1, Damage.DamageType.PHYSICAL,
-                rarity, 1, 2, passive, 0, 0, description + " Účinkuje pouze vybavený. Lze nosit jeden talisman."));
+                rarity, 1, 2, passive));
     }
 }

@@ -3,23 +3,7 @@ public class Damage {
     // ------------------------------------ typ ucinku a jeho cesky nazev ------------------------------------
 
     public enum DamageType {
-        PHYSICAL("Fyzické"),
-        FIRE("Oheň"),
-        POISON("Jed"),
-        HEAL("Léčení");
-
-        private final String label;
-
-        DamageType(String label) {
-            this.label = label;
-        }
-
-        // ------------------------------------ textovy vypis ucinku ------------------------------------
-
-    @Override
-        public String toString() {
-            return label;
-        }
+        PHYSICAL, POISON, HEAL
     }
 
     // ------------------------------------ zbyvajici sila a pocet tahu ------------------------------------
@@ -29,10 +13,6 @@ public class Damage {
     private int timer;
 
     // ------------------------------------ vytvoreni a kontrola ucinku ------------------------------------
-
-    public Damage(DamageType type, int amount) {
-        this(type, amount, 1);
-    }
 
     public Damage(DamageType type, int amount, int timer) {
         if (type == null || amount < 0 || timer < 1) {
@@ -59,12 +39,8 @@ public class Damage {
 
     // ------------------------------------ vypocet a spotrebovani jedne davky ------------------------------------
 
-    public int nextAmount() {
-        return timer == 0 ? 0 : (int) Math.round((double) amount / timer);
-    }
-
     public int takeTick() {
-        int result = nextAmount(); // zaokrouhlujeme zbytek aby se posledni cast neztratila
+        int result = timer == 0 ? 0 : (int) Math.round((double) amount / timer);
         if (timer > 0) {
             amount -= result;
             timer--;
@@ -72,13 +48,7 @@ public class Damage {
         return result;
     }
 
-    public boolean tick() {
-        if (timer == 0) return false;
-        takeTick();
-        return true;
-    }
-
-    // ------------------------------------ ocista a slouceni ohne ------------------------------------
+    // ------------------------------------ odebrani casti zbyleho poskozeni pri ociste ------------------------------------
 
     public int reduceRemaining(int maximum) {
         int removed = Math.min(amount, Math.max(0, maximum));
@@ -86,16 +56,4 @@ public class Damage {
         return removed;
     }
 
-    public void mergeFire(Damage incoming) {
-        if (type != DamageType.FIRE || incoming.type != DamageType.FIRE || incoming.timer == 0) {
-            throw new IllegalArgumentException("Sloučit lze pouze trvající ohnivé účinky.");
-        }
-        amount = Math.addExact(amount, incoming.amount); // zachovame oba zbyvajici soucty
-        timer = Math.max(timer, incoming.timer); // kratsi ucinek se rozlozi do delsiho
-    }
-
-    @Override
-    public String toString() {
-        return type + ": zbývá " + amount + " / " + timer + " tahů, příště " + nextAmount();
-    }
 }

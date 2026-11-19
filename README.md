@@ -1,87 +1,97 @@
 # Duel 1V1
 
-Lokální hra pro dva hráče u jedné klávesnice. Nakupte vybavení, naplánujte akce a vyhrajte tři souboje. Rozhraní, předměty, popisy i návod jsou v češtině.
+Lokální hra pro dva hráče u jedné klávesnice. Hráči nakupují vybavení, plánují akce a snaží se vyhrát tři souboje.
 
 ## Spuštění
 
-JDK 17 nebo novější, interaktivní terminál alespoň **100 × 32 znaků**. Doporučená velikost je **140 × 42**.
+Ve VS Code použij **Run Java** nad metodou `main`, nebo vyber konfiguraci **Duel** a stiskni F5. Nastavení v [.vscode/launch.json](.vscode/launch.json) používá integrovaný terminál.
+
+V samostatném terminálu, otevřeném ve složce projektu:
 
 ```bash
-javac --release 17 -encoding UTF-8 -d build/check src/*.java
-java -cp build/check Main
+src/oracleJdk-27/bin/javac --release 17 -encoding UTF-8 -d bin src/*.java
+src/oracleJdk-27/bin/java -cp bin Main
 ```
 
-Volitelně lze změnit mezeru mezi hlavním obsahem a pravými panely:
+Pokud máš JDK v systémové cestě, stačí `javac` a `java`. Adresář `src/oracleJdk-27` obsahuje přibalené JDK, nikoli zdrojový kód hry. `bin` je vygenerovaný výstup kompilace.
 
-```bash
-java -Dduel.panelGap=4 -cp build/check Main
-```
+Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F1/H otevře návod, L historii, I popis výbavy, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
 
-Šipky vybírají prvky i doleva a doprava, Enter potvrzuje. **F1** nebo **H** otevře návod, **L** historii, **Esc** vrací předchozí pohled, **Ctrl+C** ukončí hru. Při výběru bojové výbavy zobrazí **I** popis vybraného předmětu. Během úpravy jména se písmena zapisují do jména. Zmenšení okna pod minimum pozastaví ovládání, nikoli uložený stav zápasu.
+## Který soubor má jaký důvod
 
-## Orientace v rozhraní
+| Soubor | Co má na starosti |
+| --- | --- |
+| [Main.java](src/Main.java) | Vstup programu, vytvoření menu, klávesy, vrstvy a aktualizace údajů na obrazovce. |
+| [Game.java](src/Game.java) | Pořadí hráčů, fáze zápasu, obchodování, plánování, provedení akcí a vítězství. |
+| [Player.java](src/Player.java) | Stav jednoho hráče: životy, výdrž, zlato, štít, plán a účinky. |
+| [Inventory.java](src/Inventory.java) | Vlastněné kusy předmětů a odkazy na vybavenou zbroj a talisman. |
+| [Item.java](src/Item.java) | Neměnné hodnoty jednoho předmětu a vytvoření kopie pro nákup. |
+| [ItemCatalog.java](src/ItemCatalog.java) | Seznam předmětů a jejich hodnoty. |
+| [ItemType.java](src/ItemType.java), [Rarity.java](src/Rarity.java) | Kategorie předmětu a váha při losování nabídky. |
+| [Shop.java](src/Shop.java) | Společná zásoba, losování, nákup a prodej. |
+| [Damage.java](src/Damage.java) | Zbývající síla a délka jednoho časovaného účinku. |
+| [GameText.java](src/GameText.java) | České popisy odvozené přímo z hodnot předmětu nebo účinku. |
+| [GameRules.java](src/GameRules.java) | Společné číselné konstanty pro ladění hry. |
+| [MiniTui.java](src/MiniTui.java) | Podpůrná knihovna: prvky, klávesnice, vrstvy a vykreslování terminálu. Neobsahuje pravidla souboje. |
 
-- Bílá patří úvodním a výsledkovým obrazovkám; oranžová prvnímu hráči a mátová druhému. Záhlaví ukazuje souboj, fázi a aktuálního hráče.
-- Vlevo nahoře je skóre a pořadí začátku obchodu a boje. Samostatný rámeček pod ním zobrazuje zprávy.
-- Vpravo zůstávají oba hráči: životy, štít, vybavení a účinky. Zlato je vidět v obchodě a po výsledku. Zbývající výdrž je přímo v záhlaví bojové výbavy a detailu předmětu. Podrobnosti rozbalí úplný stav hráče.
-- Obchod má kompaktní sloupce předmětu, účinku, ceny a množství, s jemným střídáním pozadí celých řádků. Jejich šířka se na velkém terminálu neprotahuje bez omezení. V záhlaví obchodu vidíš své zlato. Zlato je žluté, dostupné kusy zelené, vyprodané červené. Nedostupný nákup je vysvětlený a vypnutý.
-- Návod a historie jsou globální ovládací prvky v patičce. Otevření ani zavření nespotřebuje tah a nemaže plán.
+## Jak program projít před prezentací
 
-## Zápas a obchod
+### 1. Od spuštění k tlačítku
 
-Každý začíná s **15 zlatými**, **40 životy**, **12 výdrže** a **10 místy v inventáři**. Po zadání jmen hra přejde do obchodu. První nakupující se losuje a druhý začne boj; příští souboj si pořadí obrátí.
+`Main.main` vytvoří aplikaci a spustí `MiniTui.start`. Konstruktor aplikace jednou vytvoří všechny nabídky a zaregistruje jejich akce.
 
-Deset náhodných nabídek vychází ze 76 předmětů. Oba hráči nakupují stejnou zásobu, která se při předání neresetuje. Zbraně do 7 zlata mají trojnásobnou váhu výběru; žádná kategorie není zaručená. Rarita mění pravděpodobnost, množství má každý předmět vlastní rozsah.
+MiniTui má vstupní vlákno, které čte klávesy a ukládá je do fronty. Hlavní smyčka klávesy zpracuje, spustí odpovídající akci a vykreslí obrazovku. Herní změny proto probíhají v hlavní smyčce.
 
-V obchodě lze nakupovat, prodávat a měnit vybavení. Prodej vrátí polovinu ceny **zaokrouhlenou dolů** a předmět odstraní. Pokud dva hráči za sebou pokračují bez nákupu či prodeje, začne boj. Tlačítko vždy říká, zda předá obchod konkrétnímu hráči, nebo zahájí souboj.
+Zápis `() -> open(HELP)` ukládá práci pro pozdější stisk tlačítka. Během vytvoření tlačítka se `open` ještě nevolá.
 
-Vítěz dostane **6 zlata**, poražený **9**. V dalším souboji zůstávají peníze a nevyužité předměty; zdraví, výdrž a bojové stavy se resetují. Tři vítězství ukončí zápas. Výsledek uvádí odměny u jmen hráčů.
+### 2. Přepínání nabídek
 
-## Plánování a pořadí akcí
+Každé menu má číslo vrstvy `z`. MiniTui vykresluje jen aktuální vrstvu. Prvky ostatních menu zůstávají vytvořené.
 
-Každý hráč dostane jeden přípravný tah bez útoků. Potom začíná **kolo 1**, složené z tahů obou hráčů. Záhlaví ukazuje i pozici v kole, například `Kolo 1 (2/2)`.
+Hra začíná zadáním jmen. `layer` uchovává aktuální menu a `previousLayers` je zásobník čísel předchozích menu. `open` nejprve ověří dostupnost nové vrstvy a potom uloží starou. `back` vezme poslední číslo ze zásobníku. Prázdný zásobník znamená, že se není kam vrátit.
 
-Výběr akce ji přidá do viditelného plánu a rezervuje výdrž. **Životy, štíty, léčení, spotřeba lektvarů a nové stavy se mění až při potvrzení konce tahu.** Plán se provede shora dolů a při smrti se další akce zastaví. Vybranou akci lze odebrat; rezervace výdrže se přepočítá. Pořadí odpovídá pořadí přidávání.
+Prvky mají předponu podle obrazovky: například `shopContinueButton` nebo `combatPlanButtons`. Společné prvky mají předpony `menu`, `match` a `document`. Panel zápasu a textový panel existují pouze jednou; jejich `z` se přesouvá na aktivní vrstvu.
 
-Pěst je trvalou součástí výbavy, nestojí zlato a nezabírá inventář, ale stojí výdrž. První použití stojí 2, další ve stejném tahu 3, 4 atd. Zbraně a štíty jsou opakovatelné a mají vlastní přírůstek ceny; cena se obnoví na začátku dalšího vlastního tahu. Lektvar lze naplánovat jednou na fyzický kus a spotřebuje se až při provedení.
+`refresh` se volá po akci nebo při přechodu mezi menu. Aktualizuje společný panel a právě otevřenou obrazovku. Nemění životy ani neprovádí akce. Při přechodu na jiného hráče nebo do další fáze se historie návratů vyčistí. Návod se zalomí do řádků jednou při vytvoření menu.
 
-Na začátku vlastního tahu se obnoví výdrž, působí talisman a potom časované účinky v pořadí vzniku. Bonus výdrže může překročit běžné maximum. Starý štít kryje i úvodní účinky a potom zanikne.
+### 3. Obchod a vlastnictví
 
-## Poškození a předměty
+`Game` vlastní oba hráče a jeden společný `Shop`. Nabídka je mapa předmět → počet kusů. Rarita určuje váhu losování a levné zbraně mají vyšší váhu. Vybraný druh se odebere ze seznamu kandidátů, aby se ve stejné nabídce neopakoval.
 
-Fyzické poškození působí při vyhodnocení akce. Jed a oheň působí na začátku dalších tahů cíle. **Síla časovaného předmětu znamená dávku za tah**, Všude se používá zápis **`Jed: 4 × 3 (12)`**: síla × počet tahů (celkem). Léčení používá stejný zápis. Přímé poškození se zkracuje například na `3 fyzické`. Uvedené poškození je před obranou cíle.
+Při nákupu vznikne `item.copy()`. Nabídka a každý koupený kus tak mají vlastní identitu. Dvě stejně pojmenované zbraně jsou dva různé objekty.
 
-Sloučení ohně nebo očista mohou změnit zbývající dávky. Stav pak ukazuje přesnou posloupnost a celkový zbytek, například `Oheň: 5 → 6 → 5 (16)`; neslibuje konstantní dávku, pokud by součet neseděl.
+`traded` říká, zda hráč během své návštěvy nakupoval nebo prodával. Dvě návštěvy za sebou bez obchodování zahájí souboj. Nákup ani prodej zásobu pro druhého hráče neobnoví.
 
-Oheň sčítá zbývající celkové poškození a ponechá delší trvání. Jedy zůstávají samostatné. Dávka je zbývající součet dělený zbývajícím počtem tahů, zaokrouhlený na nejbližší celé číslo. Při dělení se odečítá skutečná dávka, aby se zachoval součet. Životy jsou celá čísla. Výjimkou zaokrouhlování je prodejní cena, která se zaokrouhluje dolů.
+### 4. Plánování a rezervace výdrže
 
-Zbroj působí před štítem. Odolnost snižuje konkrétní typ poškození; prahová zbroj odečítá při splnění podmínky a propustí alespoň polovinu zásahu zaokrouhlenou nejbližším celým číslem. Aktivní štít může pohltit i zbytek. Očistné talismany odebírají nejvýše 3 zbývajícího poškození daného typu za vlastní tah, ne celý stav bez omezení.
+`Player.actions` je seznam předmětů v pořadí provedení. Pěst je běžný předmět definovaný jako `ItemCatalog.FIST`, který má každý hráč trvale v inventáři. Nelze ji prodat ani odebrat; vedle ní zůstává deset míst pro koupené předměty. Útok pěstí používá stejnou cestu jako jiná fyzická zbraň.
 
-Vybavit lze jednu zbroj a jeden talisman, pouze v obchodě. Vybavení zabírá místo v inventáři. Brašna přidá místa při vybavení; při sundání či prodeji se zbývající obsah musí vejít. Čísla pro ladění jsou v `src/GameRules.java` a `src/ItemCatalog.java`. Názvy a popisy odvozené z aktuálních hodnot spravuje `src/GameText.java`.
+Enter na výbavě přidá předmět do plánu. Enter na řádku plánu jej rovnou odebere. Tlačítka ukazují cenu akce; samotná hra ověří její platnost a případné odmítnutí vypíše do panelu Info.
 
-Hra zatím nemá limit tahů, automatickou remízu, ukládání po ukončení ani síťové hraní. Předchozí zpráva z vyvažování v `playtests/balance-report.md` zachycuje starší pravidla před zavedením plánů a placené opakovatelné pěsti.
+`Game.act` zkontroluje přípravnou fázi, vlastnictví, spotřební kus a cenu plánu. Při úspěchu rezervuje výdrž a uloží plán. Poškození ani léčení zatím neproběhne.
 
-## Ověření
+Cena opakovaného použití vychází z počtu předchozích použití stejného kusu v plánu. Porovnání `==` je zde záměrné: jiná kopie stejné zbraně je jiný kus.
 
-```bash
-javac --release 17 -encoding UTF-8 -d build/check src/*.java tests/*.java
-java -cp build/check DamageTest
-java -cp build/check GameTest
-java -cp build/check QueuedCombatTest
-java -cp build/check TimedItemTest
-java -cp build/check MainUiTest
-java -cp build/check MiniTuiWidgetTest
-java -cp build/check TerminalInputTest
-java -cp build/check BalanceRegressionTest
-python3 tests/terminal_smoke.py
-```
+Příklad: při 12 výdrže stojí tři pěsti 2 + 3 + 4, zbývají tedy 3. Po odebrání první pěsti stojí zbývající dvě znovu 2 + 3, takže zbývá 7. Proto se přepočítá celý plán, nikoli jen cena odebrané akce.
 
-`MainUiTest` ukládá skutečně vykreslené terminálové snímky do `build/ui-snapshots`. Volitelný převod do PNG vyžaduje Python s Pillow:
+Rozpočet pro změnu plánu je `zbývající výdrž + stará cena plánu`. Od něj se odečte nová cena. Když změna nevyjde, původní plán i výdrž zůstanou stejné.
 
-```bash
-python3 tests/render_terminal.py
-```
+### 5. Provedení tahu
 
-Řádková verze stejného herního modelu se spouští `java -cp build/check Playtest 17`. Číslo je semínko náhody. Popis příkazů se vypíše při spuštění; `end` vyhodnotí aktuální plán. Pro vývoj existuje také `BalanceSimulation`, jeho jednoduché strategie ale nepředstavují optimální lidské hraní.
+`Game.endTurn` prochází plán shora dolů. Každou akci provede `resolveAction`. Po každé akci se kontroluje smrt; při smrti se zbytek plánu neprovede.
 
-Podrobný **anglický** záznam rozhodnutí a jejich změn je v `.leave/progress.txt`, aktuálně sekce 16. Adresář `.leave` je podle stávajícího `.gitignore` pouze lokální. Starší sekce jsou historické a nejsou aktuální specifikací hry.
+Pak se vystřídá hráč výrazem `1 - current` a zavolá se `beginTurn`. Ten obnoví výdrž včetně bonusu z předchozího tahu, vyčistí plán, vyhodnotí talisman a časované účinky. Starý štít chrání i před úvodními účinky a teprve potom se smaže.
+
+Přípravné tahy používají stejný plán, ale útoky jsou během nich zakázané.
+
+### 6. Účinky, obrana a konec zápasu
+
+`Damage` drží celkovou zbývající sílu a počet zbývajících tahů. Dávka je zaokrouhlené `amount / timer`. Skutečná dávka se odečte a časovač sníží o jeden, aby se neztratil celkový součet.
+
+Účinky zůstávají v pořadí vzniku. `getEffects` vrací kopii seznamu, takže během jejich procházení lze hotové účinky bezpečně odstranit z hráče. Léčení se omezuje maximem životů; poškození nejprve upraví odpovídající zbroj, potom ho pohltí štít a zbytek sníží životy.
+
+Při smrti `finishIfDefeated` přidá výhru a odměny. Tři výhry znamenají konec zápasu. Jinak `nextBattle` obnoví bojové stavy a otočí pořadí začínajících hráčů; peníze a předměty zůstávají.
+
+## Rozměry terminálu
+
+MiniTui používá `stty` jako zálohu a zároveň se ptá samotného terminálu na rozměry. Dotazy na velikost okna mohou být vypnuté, proto navíc uloží polohu kurzoru, posune jej do pravého dolního rohu, zeptá se na jeho souřadnice a vrátí jej zpět. Platná odpověď má přednost před zastaralou velikostí pseudo-terminálu a nevloží se do rozepsaného jména. Podporované sekvence a omezení dotazů popisuje [dokumentace xterm.js](https://xtermjs.org/docs/api/vtfeatures/) a [nastavení windowOptions](https://xtermjs.org/docs/api/terminal/interfaces/iwindowoptions/).

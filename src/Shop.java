@@ -7,31 +7,28 @@ import java.util.Random;
 
 public class Shop {
 
-    // ------------------------------------ sdilene zasoby a ceny nabidek ------------------------------------
+    // ------------------------------------ sdilene zasoby obchodu ------------------------------------
 
     private final Map<Item, Integer> stock = new LinkedHashMap<>();
-    private final Map<Item, Integer> prices = new LinkedHashMap<>();
 
-    // ------------------------------------ cteni nabidky a cen ------------------------------------
+    // ------------------------------------ cteni nabidky ------------------------------------
 
     public Map<Item, Integer> getStock() {
         return Collections.unmodifiableMap(stock);
-    }
-
-    public int getPrice(Item item) {
-        return prices.getOrDefault(item, -1);
     }
 
     // ------------------------------------ nahodne obnoveni nabidky a vahy vyberu ------------------------------------
 
     public void refresh(Random random) {
         stock.clear();
-        prices.clear();
         List<Item> available = new ArrayList<>(ItemCatalog.getItems());
         for (int count = 0; count < GameRules.SHOP_SIZE && !available.isEmpty(); count++) {
-            int totalWeight = available.stream().mapToInt(this::selectionWeight).sum();
+            // Kazda jednotka vahy je jeden los. Vyssi vaha znamena vice sanci na vyber.
+            int totalWeight = 0;
+            for (Item item : available) totalWeight += selectionWeight(item);
             int ticket = random.nextInt(totalWeight); // vyber podle vah bez opakovani stejneho druhu
             Item selected = available.get(0);
+            // Odectenim vah najdeme predmet, do jehoz intervalu vylosovane cislo spada.
             for (Item item : available) {
                 ticket -= selectionWeight(item);
                 if (ticket < 0) {
@@ -39,9 +36,10 @@ public class Shop {
                     break;
                 }
             }
+            // Vybrany druh uz nelosujeme znovu. Jeho pocet kusu urci samostatny nahodny vyber.
             available.remove(selected);
             int quantity = selected.getMinStock() + random.nextInt(selected.getMaxStock() - selected.getMinStock() + 1);
-            addItem(selected, selected.getPrice(), quantity);
+            stock.put(selected, quantity);
         }
     }
 
@@ -51,28 +49,14 @@ public class Shop {
         return item.getRarity().getWeight() * multiplier;
     }
 
-    // ------------------------------------ pridani nabidky a odebrani kusu ze skladu ------------------------------------
-
-    public boolean addItem(Item item, int price, int quantity) {
-        if (item == null || price < 0 || quantity < 0) return false;
-        stock.merge(item, quantity, Integer::sum);
-        prices.put(item, price);
-        return true;
-    }
-
-    public boolean buy(Item item, int quantity) {
-        if (item == null || quantity <= 0 || stock.getOrDefault(item, 0) < quantity) return false;
-        stock.put(item, stock.get(item) - quantity);
-        return true;
-    }
-
     // ------------------------------------ nakup do inventare a prodej predmetu ------------------------------------
 
     public boolean purchase(Player player, Item item) {
-        int price = getPrice(item);
-        if (price < 0 || player.getGold() < price || stock.getOrDefault(item, 0) < 1) return false;
+        if (item == null || stock.getOrDefault(item, 0) < 1) return false;
+        int price = item.getPrice();
+        if (player.getGold() < price) return false;
         if (!player.addToInventory(item.copy())) return false; // nejprve overime misto bez ztraty zlata
-        buy(item, 1);
+        stock.put(item, stock.get(item) - 1);
         player.changeGold(-price);
         return true;
     }

@@ -1,5 +1,6 @@
 {
-    "java.project.sourcePaths": ["src", "tests"],
+    "java.project.sourcePaths": ["src"],
+    "java.debug.settings.console": "integratedTerminal",
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
         "lib/**/*.jar"

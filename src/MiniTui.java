@@ -553,6 +553,7 @@ public class MiniTui {
     private volatile Exception inputFailure;
     private String unixTerminalMode;
     private boolean terminalRestored;
+    private volatile boolean terminalSizeReported;
 
     // ------------------------------------ registrace a odstraneni prvku ------------------------------------
 
@@ -670,6 +671,7 @@ public class MiniTui {
         running = true;
         boolean isWindows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
         terminalRestored = false;
+        terminalSizeReported = false;
         inputFailure = null;
         lastFrame = "";
         lastRenderedGeometry = null;
@@ -788,6 +790,24 @@ public class MiniTui {
     // zpracuje sjednocene klavesy nezavisle na operacnim systemu
     // v rezimu uprav meni text a jinak vybira nebo aktivuje prvky
     private void handleKey(String key) {
+        // Rozmery mohou prijit jako velikost okna nebo poloha kurzoru v pravem dolnim rohu.
+        // Odpoved patri terminalu, ne rozepsanemu jmenu ani ovladani menu.
+        if (key.startsWith("\033[8;") && key.endsWith("t")
+                || key.startsWith("\033[") && key.endsWith("R")) {
+            try {
+                String[] size = key.substring(key.endsWith("R") ? 2 : 4, key.length() - 1).split(";", -1);
+                if (size.length == 2) {
+                    int height = Integer.parseInt(size[0]);
+                    int width = Integer.parseInt(size[1]);
+                    if (width > 0 && height > 0 && width <= 10000 && height <= 10000) {
+                        terminalSizeReported = true;
+                        updateTerminalGeometry(width, height, 0, 0);
+                    }
+                }
+            } catch (NumberFormatException ignored) {
+            }
+            return;
+        }
         if (key.equals("CTRL_C")) {
             running = false;
             return;
@@ -1144,6 +1164,8 @@ public class MiniTui {
                         case 'C' -> "RIGHT";
                         case 'D' -> "LEFT";
                         case 'P' -> "F1";
+                        case 'R' -> escape.toString().startsWith("\033[") ? escape.toString() : null;
+                        case 't' -> escape.toString().startsWith("\033[8;") ? escape.toString() : null;
                         case '~' -> switch (escape.substring(2, escape.length() - 1).split(";", 2)[0]) {
                             case "11" -> "F1";
                             case "5" -> "PGUP";
@@ -1169,19 +1191,24 @@ public class MiniTui {
 
     // ------------------------------------ zjisteni a ulozeni rozmeru terminalu ------------------------------------
 
-    // prikaz stty vraci nejprve radky a potom sloupce
-    // pri chybe zustane posledni znama velikost
+    // Stty je zaloha. Terminal se pak zmeri dotazem na velikost a polohu v pravem dolnim rohu.
+    // Dotaz na polohu funguje i kdyz terminal nepovoluje dotazy na velikost okna (napr. VS Code).
     private void updateUnixTermSize() {
         try {
-            String out = execSh("stty size < /dev/tty").trim();
-            String[] parts = out.split("\\s+");
-            if (parts.length == 2) {
-                updateTerminalGeometry(Integer.parseInt(parts[1]), Integer.parseInt(parts[0]), 0, 0);
+            if (!terminalSizeReported) {
+                String out = execSh("stty size < /dev/tty").trim();
+                String[] parts = out.split("\\s+");
+                if (parts.length == 2) {
+                    updateTerminalGeometry(Integer.parseInt(parts[1]), Integer.parseInt(parts[0]), 0, 0);
+                }
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } catch (IOException | NumberFormatException ignored) {
         }
+        // Ulozeni a navrat kurzoru zabrani tomu, aby mereni menilo pozici pri psani.
+        System.out.print("\033[18t\0337\033[9999;9999H\033[6n\0338");
+        System.out.flush();
     }
 
     private synchronized void updateTerminalGeometry(int width, int height, int left, int top) {

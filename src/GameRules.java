@@ -20,11 +20,10 @@ public final class GameRules {
 
     public static final int WINS_REQUIRED = 3;
 
-    // ------------------------------------ sila a cena opakovaneho utoku pesti ------------------------------------
+    // ------------------------------------ sila a zakladni cena pesti ------------------------------------
 
     public static final int BASIC_DAMAGE = 3;
     public static final int BASIC_STAMINA_COST = 2;
-    public static final int BASIC_REPEAT_COST_INCREASE = 1;
 
     // ------------------------------------ delka pripravne faze ------------------------------------
 

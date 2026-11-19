@@ -6,5 +6,7 @@
 /.agents/
 /.aws/
 /.codex/
-/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/launch.json
 /.leave/

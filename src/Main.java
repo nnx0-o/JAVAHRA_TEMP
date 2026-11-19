@@ -1,804 +1,682 @@
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.Random;
 
 public class Main {
 
-    // ------------------------------------ typy obrazovek a ulozeny navratovy pohled ------------------------------------
+    // Main propojuje ovladani s Game: vytvori prvky, zavola herni akci a zobrazi vysledek.
+    // Pravidla souboje patri do Game a Player; zde se meni hlavne obsah obrazovky.
 
-    private enum Screen {
-        WELCOME, NAMES, HOME, DETAIL, HELP, HISTORY, PLAYER
-    }
+    // ------------------------------------ vrstvy a pevna velikost rozhrani ------------------------------------
 
-    // Uklada pouze navigaci. Samotny zapas zustava v objektu Game.
-    private record View(Screen screen, int page, boolean inventory, Item item,
-                        boolean offer, int player, String focusText, int focusX, int focusY) {}
-
-    // ------------------------------------ barvy rozhrani ------------------------------------
-
-    private static final String WHITE = MiniTui.Color.WHITE;
-    private static final String MUTED = MiniTui.Color.BRIGHT_BLACK;
-    private static final String GOLD = MiniTui.Color.YELLOW;
-    private static final String RED = MiniTui.Color.BRIGHT_RED;
+    private static final int NAMES = 0, SHOP = 1, COMBAT = 2, DETAIL = 3;
+    private static final int HELP = 4, HISTORY = 5, PLAYER = 6, RESULT = 7, SIZE_WARNING = 8;
+    private static final int WIDTH = 140, HEIGHT = 38, TEXT_ROWS = 18, PLAN_ROWS = 16;
+    private static final String WHITE = MiniTui.Color.WHITE, MUTED = MiniTui.Color.BRIGHT_BLACK;
     private static final String ORANGE = MiniTui.Color.foreground(255, 170, 80);
     private static final String MINT = MiniTui.Color.foreground(112, 235, 180);
 
-    // ------------------------------------ herni model a pomocne objekty rozhrani ------------------------------------
+    // ------------------------------------ hra a udaje potrebne pro navrat mezi menu ------------------------------------
 
     private final MiniTui tui = new MiniTui();
-    private final Deque<View> views = new ArrayDeque<>();
     private final GameText text = new GameText();
-    private Game game;
-
-    // ------------------------------------ otevreny pohled, vybrane predmety a strankovani ------------------------------------
-
-    private Screen screen = Screen.WELCOME;
-    private int page;
-    private boolean inventoryView;
-    private Item selectedItem;
-    private boolean shopItem;
-    private int selectedPlayer;
-    private int selectedPlan = -1;
-    private int planPage;
-    private int helpSlice;
-
-    // ------------------------------------ obnoveni vyberu po prekresleni ------------------------------------
-
-    private Screen lastDrawnScreen;
-    private int lastDrawnActor = -1;
-    private Game.Phase lastDrawnPhase;
-    private String requestedFocus;
-    private int requestedX;
-    private int requestedY;
-
-    // ------------------------------------ propojeni radku vybavy s predmety ------------------------------------
-
-    private final Map<MiniTui.Element, Item> toolkitRows = new HashMap<>();
-
-    // ------------------------------------ rozmery terminalu a panelu ------------------------------------
-
-    private int width;
-    private int height;
-    private int leftWidth;
-    private int rightX;
-    private int rightWidth;
-    private final int panelGap = Math.max(2, Integer.getInteger("duel.panelGap", 3));
-
-    // ------------------------------------ zprava a rozepsana jmena hracu ------------------------------------
-
+    private final Deque<Integer> previousLayers = new ArrayDeque<>();
+    private Game game; // null do potvrzeni jmen, potom jeden objekt pro cely zapas
+    private int layer = NAMES; // cislo menu; herni fazi uchovava samostatne Game
     private String message = "";
-    private String firstValue = "Hráč 1";
-    private String secondValue = "Hráč 2";
-    private MiniTui.Input firstName;
-    private MiniTui.Input secondName;
+    private boolean shopInventoryOpen, detailIsOffer;
+    private Item detailItem;
+    private int playerDetailsIndex, combatPlanPage;
 
-    // ------------------------------------ inicializace rozhrani a klavesovych zkratek ------------------------------------
+    // ------------------------------------ trvale prvky pojmenovane podle sve obrazovky ------------------------------------
+
+    private MiniTui.Input namesFirstInput, namesSecondInput;
+    private MiniTui.Box shopPanel, combatEquipmentPanel;
+    private MiniTui.Button shopContinueButton, resultContinueButton;
+    private MiniTui.Button detailBuyButton, detailSellButton, detailEquipButton, detailAddButton;
+    private MiniTui.Button combatPlanPreviousButton, combatPlanNextButton;
+    private MiniTui.Label shopColumnsLabel, combatPlanPageLabel, resultLabel;
+    private final MiniTui.Button[] shopOfferButtons = new MiniTui.Button[GameRules.SHOP_SIZE];
+    private final MiniTui.Button[] shopInventoryButtons = new MiniTui.Button[GameRules.INVENTORY_CAPACITY + 1];
+    private final MiniTui.Button[] combatEquipmentButtons = new MiniTui.Button[GameRules.INVENTORY_CAPACITY + 1];
+    private final Item[] combatEquipmentItems = new Item[combatEquipmentButtons.length]; // predmet za tlacitkem se stejnym indexem
+    private final MiniTui.Button[] combatPlanButtons = new MiniTui.Button[PLAN_ROWS];
+
+    // ------------------------------------ spolecne prvky presouvane na aktivni vrstvu ------------------------------------
+
+    private final List<MiniTui.Element> navigationElements = new ArrayList<>();
+    private final List<MiniTui.Element> matchElements = new ArrayList<>();
+    private final List<MiniTui.Element> documentElements = new ArrayList<>();
+    private MiniTui.Label menuHeading, matchMessage, sizeWarningLabel;
+    private MiniTui.Button menuBackButton, menuHistoryButton;
+    private MiniTui.Box matchScorePanel, documentPanel;
+    private final MiniTui.Label[][] matchPlayerStats = new MiniTui.Label[2][7];
+    private final MiniTui.Label[] documentRows = new MiniTui.Label[TEXT_ROWS];
+    private MiniTui.Button documentPreviousButton, documentNextButton;
+    private MiniTui.Label documentPageLabel;
+    private final int[] documentPages = new int[RESULT + 1];
+    private List<String> helpLines;
+
+    // ------------------------------------ vsechny prvky vzniknou jednou, zacina se zadanim jmen ------------------------------------
 
     public Main() {
-        tui.onKey("F1", () -> open(Screen.HELP));
-        tui.onKey("h", () -> open(Screen.HELP));
-        tui.onKey("l", () -> {
-            if (game != null) open(Screen.HISTORY);
-        });
-        tui.onKey("ESC", this::back);
-        tui.onKey("i", () -> {
-            if (screen == Screen.HOME && toolkitRows.containsKey(tui.getFocusedElement()))
-                inspect(toolkitRows.get(tui.getFocusedElement()), false);
-        });
-        // Konstruktor pouze sestavi prvni pohled; smycku spousti main().
-        draw();
+        // Registrace prvku a jejich akci probiha pred spustenim smycky terminalu.
+        buildMenus();
+        registerKeys();
 
-        // Zmena rozmeru prestavi prvky; neposouva tah ani nemeni herni stav.
-        tui.onTick(() -> {
-            if (width != tui.getTerminalWidth() || height != tui.getTerminalHeight()) draw();
-        });
+        refresh();
+        focusDefault();
+
+        // this::checkTerminalSize predava metodu k pozdejsimu volani pri kazdem ticku.
+        tui.onTick(this::checkTerminalSize);
     }
 
-    // ------------------------------------ barva aktivniho hrace a obrazovky ------------------------------------
-
-    private String playerColor(int index) {
-        return index == 0 ? ORANGE : MINT;
+    public static void main(String[] args) {
+        // new Main() provede konstruktor vyse; teprve start() zacne cist klavesy a kreslit.
+        new Main().tui.start();
     }
 
-    private String accent() {
-        return game != null && (game.getPhase() == Game.Phase.SHOP || game.getPhase() == Game.Phase.COMBAT)
-                ? playerColor(game.getCurrentIndex()) : WHITE;
+    // ------------------------------------ vytvareni prvku na dane vrstve ------------------------------------
+
+    private MiniTui.Label label(int z, int x, int y, String value, String color) {
+        return tui.add(new MiniTui.Label(x, y, z, value, color));
     }
 
-    // ------------------------------------ vypocet prostoru pro hlavni obsah ------------------------------------
-
-    private int contentY() {
-        return game == null ? 5 : 12;
+    private MiniTui.Box box(int z, int x, int y, int width, int height, String title) {
+        return tui.add(new MiniTui.Box(x, y, z, width, height, title, MUTED));
     }
 
-    private int contentHeight() {
-        return height - contentY() - 5;
+    private MiniTui.Button button(int z, int x, int y, String value, Runnable action) {
+        // Runnable je akce bez parametru a navratove hodnoty. MiniTui pozdeji zavola action.run().
+        // Napr. () -> open(HELP) znamena "po stisku zavolej open(HELP)", nikoli "zavolej ted".
+        return tui.add(new MiniTui.Button(x, y, z, value, action));
     }
 
-    // ------------------------------------ vytvareni popisku, ramecku a tlacitek ------------------------------------
-
-    private void label(int x, int y, String value, String color) {
-        tui.add(new MiniTui.Label(x, y, 0, value, color));
-    }
-
-    private void box(int x, int y, int w, int h, String title, String color) {
-        tui.add(new MiniTui.Box(x, y, 0, w, h, title, color));
-    }
-
-    // Runnable je akce pro pozdejsi Enter; pri vytvareni tlacitka se nespousti.
-    private MiniTui.Button button(int x, int y, String value, Runnable action) {
-        return tui.add(new MiniTui.Button(x, y, 0, value, action));
-    }
-
-    private void primary(int x, int y, String value, Runnable action) {
-        MiniTui.Button button = button(x, y, value, action);
+    private MiniTui.Button primary(int z, int x, int y, String value, Runnable action) {
+        // Stejne tlacitko jako button(), pouze s vyraznejsim vzhledem.
+        MiniTui.Button button = button(z, x, y, value, action);
         button.primary = true;
+        return button;
     }
 
-    // ------------------------------------ zkracovani textu a pocet stran ------------------------------------
+    // ------------------------------------ jmena, navigace a jednotlive obrazovky ------------------------------------
 
-    private String fit(String value, int columns) {
-        if (columns < 1) return "";
-        return value.length() <= columns ? value : value.substring(0, Math.max(0, columns - 1)) + "…";
+    private void buildMenus() {
+        // ------------------------------------ zadani jmen pred vytvorenim hry ------------------------------------
+
+        box(NAMES, 40, 7, 60, 15, "Duel 1V1 — jména hráčů");
+        namesFirstInput = tui.add(new MiniTui.Input(43, 10, NAMES, "Hráč 1", "Hráč 1", 30));
+        namesSecondInput = tui.add(new MiniTui.Input(43, 13, NAMES, "Hráč 2", "Hráč 2", 30));
+
+        // this::startGame je zkraceny zapis () -> startGame(). Hra vznikne az po stisku.
+        primary(NAMES, 44, 17, "Připraveni — do obchodu", this::startGame);
+
+        // ------------------------------------ spolecny nadpis a navigace mezi menu ------------------------------------
+
+        menuHeading = label(NAMES, 3, 1, "DUEL 1V1", WHITE);
+        menuBackButton = button(NAMES, 60, 36, "Esc  Zpět", this::back);
+        menuHistoryButton = button(NAMES, 22, 36, "L  Historie", () -> open(HISTORY));
+
+        // List.of vytvori seznam odkazu. Samotne prvky uz zaregistrovaly label() a button().
+        // Tuto skupinu pak moveElements() presune na prave otevrenou vrstvu.
+        navigationElements.addAll(List.of(
+                menuHeading,
+                menuBackButton,
+                menuHistoryButton,
+                button(NAMES, 2, 36, "F1  Návod", () -> open(HELP)),
+                button(NAMES, 107, 36, "R  Obnovit", this::refresh)
+        ));
+
+        // ------------------------------------ herni panely a jejich tlacitka ------------------------------------
+
+        // Kazda metoda vytvori svoji cast rozhrani. Aktualni cisla doplni refresh().
+        buildMatchPanel();
+        buildShop();
+        buildCombat();
+        buildDocuments();
+
+        // ------------------------------------ vysledek souboje nebo celeho zapasu ------------------------------------
+
+        // Prazdny text je zamer: viteze zatim nezname. Doplni se pri otevreni RESULT.
+        box(RESULT, 2, 12, 99, 22, "Výsledek souboje");
+        resultLabel = label(RESULT, 5, 15, "", MiniTui.Color.YELLOW);
+        resultContinueButton = primary(RESULT, 4, 34, "", this::continueResult);
+
+        // ------------------------------------ upozorneni pro prilis maly terminal ------------------------------------
+
+        sizeWarningLabel = label(SIZE_WARNING, 3, 2, "", WHITE);
+        label(SIZE_WARNING, 3, 4, "Zvětši okno nebo zmenši velikost písma.", MUTED);
     }
 
-    private int pages(int count, int size) {
-        return Math.max(1, (count + size - 1) / size);
+    // ------------------------------------ jeden spolecny panel zapasu a obou hracu ------------------------------------
+
+    private void buildMatchPanel() {
+        matchScorePanel = box(SHOP, 2, 3, 99, 4, "Zápas");
+        matchMessage = label(SHOP, 4, 9, "", WHITE);
+        matchElements.addAll(List.of(matchScorePanel, matchMessage, box(SHOP, 2, 8, 99, 3, "Info")));
+
+        // Oba hraci maji stejny panel. Smycka meni pouze polohu, barvu a index hrace.
+        for (int player = 0; player < 2; player++) {
+            // Lambda potrebuje vlastni nemenny index; promenna player se v cyklu meni.
+            final int index = player;
+            int top = player == 0 ? 3 : 20;
+            String color = player == 0 ? ORANGE : MINT;
+            matchElements.add(box(SHOP, 104, top, 34, 15, "Hráč " + (player + 1)));
+
+            // Sedm popisku naplni updateMatch(): jmeno, zdravi, stit/zlato, vybaveni a ucinky.
+            for (int row = 0; row < 7; row++) {
+                matchPlayerStats[player][row] = label(SHOP, 106, top + 2 + row, "", color);
+                matchElements.add(matchPlayerStats[player][row]);
+            }
+
+            matchElements.add(button(SHOP, 106, top + 12, "Podrobnosti", () -> {
+                playerDetailsIndex = index;
+                open(PLAYER);
+            }));
+        }
     }
 
-    // ------------------------------------ otevreni pohledu, navrat a zachovani jmen ------------------------------------
+    // ------------------------------------ deset nabidek obchodu a inventar vcetne trvale pesti ------------------------------------
 
-    private void open(Screen next) {
-        if (screen == next) return;
-        saveNames();
-        MiniTui.Element focus = tui.getFocusedElement();
-        // Zasobnik dovoli navrat i z napovedy otevrene nad detailem predmetu.
-        views.push(new View(screen, page, inventoryView, selectedItem, shopItem, selectedPlayer,
-                focus == null ? "" : focus.getText(), focus == null ? -1 : focus.x, focus == null ? -1 : focus.y));
-        screen = next;
-        page = 0;
-        helpSlice = 0;
-        draw();
+    private void buildShop() {
+        // ------------------------------------ prepinani nabidky a vlastnenych predmetu ------------------------------------
+
+        shopPanel = box(SHOP, 2, 12, 99, 22, "Obchod");
+        button(SHOP, 4, 13, "Obchod", () -> {
+            shopInventoryOpen = false;
+            refresh();
+        });
+        button(SHOP, 23, 13, "Inventář", () -> {
+            shopInventoryOpen = true;
+            refresh();
+        });
+
+        // Text tlacitka zacina az za tremi znaky ukazatele vyberu, proto hlavicka zacina na x = 7.
+        shopColumnsLabel = label(SHOP, 7, 14, "", MUTED);
+
+        // ------------------------------------ prazdne radky, ktere pozdeji naplni updateShopRows ------------------------------------
+
+        // null znamena "zatim bez akce". Pri doplneni radku dostane tlacitko konkretni predmet.
+        for (int row = 0; row < shopOfferButtons.length; row++) {
+            shopOfferButtons[row] = button(SHOP, 4, 15 + row, "", null);
+        }
+
+        for (int row = 0; row < shopInventoryButtons.length; row++) {
+            shopInventoryButtons[row] = button(SHOP, 4, 15 + row, "", null);
+        }
+
+        // ------------------------------------ potvrzeni navstevy obchodu ------------------------------------
+
+        // Game rozhodne, zda se vystrida hrac, nebo uz zacne souboj. showGame() vybere menu.
+        shopContinueButton = primary(SHOP, 4, 34, "Pokračovat", () -> {
+            game.continueShop();
+            shopInventoryOpen = false;
+            message = "";
+            showGame();
+        });
+    }
+
+    // ------------------------------------ enter vlevo pridava do planu a vpravo odebira ------------------------------------
+
+    private void buildCombat() {
+        combatEquipmentPanel = box(COMBAT, 2, 12, 48, 22, "Výbava");
+        box(COMBAT, 52, 12, 49, 22, "Plán — provede se shora dolů");
+
+        // ------------------------------------ levy seznam: vlozeni predmetu do planu ------------------------------------
+
+        for (int row = 0; row < combatEquipmentButtons.length; row++) {
+            // Tlacitko si pamatuje cislo radku. Aktualni predmet cte az pri stisku.
+            final int index = row;
+            combatEquipmentButtons[row] = button(COMBAT, 4, 14 + row, "", () -> {
+                message = game.act(combatEquipmentItems[index]);
+                combatPlanPage = Math.max(0, (game.getCurrentPlayer().getActions().size() - 1) / PLAN_ROWS);
+                refresh();
+            });
+        }
+
+        // ------------------------------------ pravy seznam: odebrani konkretni naplanovane akce ------------------------------------
+
+        for (int row = 0; row < combatPlanButtons.length; row++) {
+            final int index = row;
+            combatPlanButtons[row] = button(COMBAT, 54, 14 + row, "", () -> {
+                game.removePlannedAction(combatPlanPage * PLAN_ROWS + index);
+                refresh();
+            });
+        }
+
+        // ------------------------------------ listovani dlouhym planem ------------------------------------
+
+        // PLAN_ROWS je pocet viditelnych radku na strance, nikoli limit poctu akci.
+        label(COMBAT, 54, 31, "Enter: odebrat akci", MUTED);
+        combatPlanPreviousButton = button(COMBAT, 54, 32, "←", () -> {
+            combatPlanPage--;
+            refresh();
+        });
+        combatPlanPageLabel = label(COMBAT, 64, 32, "", MUTED);
+        combatPlanNextButton = button(COMBAT, 85, 32, "→", () -> {
+            combatPlanPage++;
+            refresh();
+        });
+
+        // ------------------------------------ provedeni celeho planu a predani tahu ------------------------------------
+
+        primary(COMBAT, 4, 34, "Provést plán a ukončit tah", () -> {
+            game.endTurn();
+            message = "";
+            combatPlanPage = 0;
+            showGame();
+        });
+        label(COMBAT, 64, 34, "I: popis výbavy", MUTED);
+    }
+
+    // ------------------------------------ spolecne radky pro detail, navod, historii a udaje hrace ------------------------------------
+
+    private void buildDocuments() {
+        // ------------------------------------ jeden textovy panel sdileny ctyrmi menu ------------------------------------
+
+        // Kazde menu si pamatuje vlastni cislo stranky v documentPages[layer].
+        documentPanel = box(DETAIL, 2, 12, 99, 22, "");
+        documentPreviousButton = button(DETAIL, 4, 32, "←", () -> {
+            documentPages[layer]--;
+            refresh();
+        });
+        documentPageLabel = label(DETAIL, 14, 32, "", MUTED);
+        documentNextButton = button(DETAIL, 30, 32, "→", () -> {
+            documentPages[layer]++;
+            refresh();
+        });
+        documentElements.addAll(List.of(documentPanel, documentPreviousButton, documentPageLabel, documentNextButton));
+
+        for (int row = 0; row < TEXT_ROWS; row++) {
+            documentRows[row] = label(DETAIL, 5, 14 + row, "", WHITE);
+            documentElements.add(documentRows[row]);
+        }
+
+        // ------------------------------------ akce dostupne pouze v detailu predmetu ------------------------------------
+
+        // Hra vrati zpravu i pri odmitnuti pokusu. refresh() ji zobrazi v panelu Info.
+        detailBuyButton = primary(DETAIL, 4, 34, "", () -> {
+            message = game.buy(detailItem);
+            refresh();
+        });
+        detailSellButton = button(DETAIL, 4, 34, "", () -> {
+            message = game.sell(detailItem);
+            if (!game.getCurrentPlayer().getInventory().contains(detailItem)) back();
+            else refresh();
+        });
+        detailEquipButton = button(DETAIL, 32, 34, "Vybavit / sundat", () -> {
+            message = game.equip(detailItem);
+            refresh();
+        });
+        detailAddButton = primary(DETAIL, 4, 34, "", () -> {
+            message = game.act(detailItem);
+            refresh();
+        });
+
+        // ------------------------------------ staticky navod pripraveny jednou pri startu ------------------------------------
+
+        helpLines = wrapText(List.of("Začni tady",
+                "Nakup vybavení a potvrď pokračování. Obchod končí po dvou návštěvách bez nákupu nebo prodeje.",
+                "V obchodě lze vybavit jednu zbroj a jeden talisman. Pěst je trvale v inventáři, mimo deset míst pro nákup.",
+                "V boji přidává Enter na výbavě akci do plánu. Enter na akci v plánu ji odebere. I otevře popis výbavy.",
+                "Každý hráč má přípravný tah bez útoků. Potom začínají běžná kola.",
+                "Výdrž se rezervuje při plánování. Opakování stejného kusu stojí více; nový vlastní tah cenu obnoví. Odebrání přepočítá celý plán.",
+                "Plán se provede shora dolů po potvrzení konce tahu. Smrt jej okamžitě zastaví. Lektvar se spotřebuje až při provedení.",
+                "Výdrž navíc z lektvarů se sčítá a přijde příští vlastní tah. Léčení nepřekročí maximum životů.",
+                "Jedy mají samostatné časovače. Každá dávka je zaokrouhlený podíl zbývající síly a tahů; odečte se od zbývající síly.",
+                "Talisman působí před časovanými účinky. Očista ubírá zbývající jed od nejstaršího; její limit je společný pro všechny jedy.",
+                "Odpovídající zbroj sníží každý zásah včetně dávek jedem, výsledek se zaokrouhlí. Potom se použije štít a nakonec životy.",
+                "Štíty se sčítají. Starý štít kryje i úvodní účinky příštího vlastního tahu, potom zanikne.",
+                "Tři vítězství ukončí zápas. Nevyužité předměty a zlato zůstávají do dalšího souboje.",
+                "F1/H otevře návod, L historii. Esc vrátí předchozí menu. R obnoví obsah. Ctrl+C ukončí hru."));
+    }
+
+    // ------------------------------------ klavesy a dostupnost jednotlivych vrstev ------------------------------------
+
+    private void registerKeys() {
+        // Stejna metoda muze byt akci tlacitka i klavesove zkratky.
+        tui.onKey("F1", () -> open(HELP));
+        tui.onKey("h", () -> open(HELP));
+        tui.onKey("l", () -> open(HISTORY));
+        tui.onKey("ESC", this::back);
+        tui.onKey("r", this::refresh);
+
+        // I najde vybrane tlacitko vybavy a otevre predmet prirazeny ke stejnemu radku.
+        tui.onKey("i", () -> {
+            if (layer != COMBAT) return;
+            for (int row = 0; row < combatEquipmentButtons.length; row++) {
+                if (tui.getFocusedElement() == combatEquipmentButtons[row]) inspect(combatEquipmentItems[row], false);
+            }
+        });
+
+        // Prazdna lambda zablokuje vychozi prepinani sousednich vrstev v MiniTui.
+        // Prechody pak vzdy projdou nasi kontrolou isAvailable().
+        for (String key : new String[]{"[", "]", "PGUP", "PGDN"}) tui.onKey(key, () -> { });
+    }
+
+    private boolean isAvailable(int next) {
+        if (next == HELP) return true;
+        if (next == NAMES) return game == null;
+        if (game == null) return false;
+        return switch (next) {
+            case SHOP -> game.getPhase() == Game.Phase.SHOP;
+            case COMBAT -> game.getPhase() == Game.Phase.COMBAT;
+            case RESULT -> game.getPhase() == Game.Phase.RESULT || game.getPhase() == Game.Phase.FINISHED;
+            case DETAIL -> detailItem != null;
+            case HISTORY, PLAYER -> true;
+            default -> false;
+        };
+    }
+
+    private void open(int next) {
+        if (next == layer || !isAvailable(next)) return;
+
+        // Ulozime pouze cislo predchoziho menu. Herni stav se nekopiruje ani nevraci zpet.
+        previousLayers.push(layer);
+        layer = next;
+        documentPages[next] = 0;
+        refresh();
+        focusDefault();
     }
 
     private void back() {
-        if (views.isEmpty()) return;
-        View view = views.pop();
-        screen = view.screen();
-        page = view.page();
-        inventoryView = view.inventory();
-        selectedItem = view.item();
-        shopItem = view.offer();
-        selectedPlayer = view.player();
-        requestedFocus = view.focusText();
-        requestedX = view.focusX();
-        requestedY = view.focusY();
-        draw();
+        if (previousLayers.isEmpty()) return;
+        // pop vrati posledni vlozenou vrstvu a zaroven ji odstrani ze zasobniku.
+        layer = previousLayers.pop();
+        refresh();
+        focusDefault();
     }
 
-    private void home() {
-        views.clear();
-        screen = Screen.HOME;
-        page = 0;
-        selectedPlan = -1;
-        draw();
+    private void showRoot(int next) {
+        // Po predani tahu se uz nesmime vratit do menu predchoziho hrace.
+        previousLayers.clear();
+        layer = next;
+        refresh();
+        focusDefault();
     }
 
-    private void saveNames() {
-        if (screen == Screen.NAMES && firstName != null) {
-            firstValue = firstName.getValue();
-            secondValue = secondName.getValue();
+    private void showGame() {
+        // Game zna fazi zapasu; Main ji pouze prelozi na odpovidajici cislo obrazovky.
+        showRoot(switch (game.getPhase()) {
+            case ANNOUNCEMENT, SHOP -> SHOP;
+            case COMBAT -> COMBAT;
+            case RESULT, FINISHED -> RESULT;
+        });
+    }
+
+    private void inspect(Item item, boolean offer) {
+        detailItem = item;
+        detailIsOffer = offer;
+        open(DETAIL);
+    }
+
+    private void startGame() {
+        game = new Game(namesFirstInput.getValue(), namesSecondInput.getValue(), new Random());
+        game.openShop();
+        message = "";
+        shopInventoryOpen = false;
+        detailItem = null;
+        combatPlanPage = 0;
+        showGame();
+    }
+
+    private void continueResult() {
+        if (game.getPhase() == Game.Phase.FINISHED) {
+            game = null;
+            showRoot(NAMES);
+        } else {
+            game.nextBattle();
+            game.openShop();
+            message = "";
+            shopInventoryOpen = false;
+            showGame();
         }
     }
 
-    // ------------------------------------ sestaveni obrazovky a obnoveni vyberu ------------------------------------
+    // ------------------------------------ jedna obnova po akci nebo prechodu, aktualizuje jen aktivni obrazovku ------------------------------------
 
-    private void draw() {
-        saveNames();
-        MiniTui.Element oldFocus = tui.getFocusedElement();
+    private void refresh() {
+        // ------------------------------------ spolecne ovladani a viditelnost panelu ------------------------------------
 
-        width = tui.getTerminalWidth();
-        height = tui.getTerminalHeight();
+        tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1/H: návod  L: historie  R: obnovit  Esc: zpět");
+        tui.setTheme(game == null ? WHITE : game.getCurrentIndex() == 0 ? ORANGE : MINT);
+        moveElements(navigationElements, true);
+        menuBackButton.visible = !previousLayers.isEmpty();
+        menuHistoryButton.visible = game != null;
+        moveElements(matchElements, game != null);
+        moveElements(documentElements, layer == DETAIL || layer == HELP || layer == HISTORY || layer == PLAYER);
 
-        // Pravy panel ma 32 az 44 sloupcu, zbytek sirky dostane hlavni obsah.
-        rightWidth = Math.min(44, Math.max(32, width / 3));
-        rightX = width - rightWidth - 2;
-        leftWidth = rightX - panelGap - 2;
+        // ------------------------------------ aktualni hodnoty v panelu zapasu ------------------------------------
 
-        // Prvky vytvarime znovu, ale Game i rozepsana jmena zustavaji zachovany.
-        tui.clear();
-        toolkitRows.clear();
-        tui.setTheme(accent());
-        tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1: návod  Esc: zpět  Ctrl+C: konec");
+        menuHeading.setText("DUEL 1V1");
+        if (game != null) updateMatch();
 
-        if (width < 100 || height < 32) {
-            label(3, 2, "Zvětši terminál alespoň na 100 × 32 znaků.", WHITE);
-            label(3, 4, "Pro pohodlné hraní doporučujeme 140 × 42. Hra počká.", MUTED);
-            return;
+        // ------------------------------------ obsah pouze prave otevrene obrazovky ------------------------------------
+
+        // case ... -> je vetev switch, nikoli lambda. Vybrana vetev se provede hned ted.
+        switch (layer) {
+            case SHOP -> updateShop();
+            case COMBAT -> updateCombat();
+            case DETAIL -> updateDetail();
+            case HELP -> updateDocument("Návod", helpLines);
+            case HISTORY -> {
+                List<String> history = new ArrayList<>(game.getLog());
+                Collections.reverse(history);
+                updateDocument("Historie — nejnovější nahoře", wrapText(history));
+            }
+            case PLAYER -> updatePlayerDetails();
+            case RESULT -> {
+                resultLabel.setText("Vítězí " + game.getPlayer(game.getWinner()).getName()
+                        + " (vítěz +" + GameRules.WIN_REWARD + ", poražený +" + GameRules.LOSS_REWARD + " zlata)");
+                resultContinueButton.setText(game.getPhase() == Game.Phase.FINISHED ? "Nový zápas" : "Pokračovat do obchodu");
+            }
         }
 
-        label(3, 1, fit(header(), width - 6), MiniTui.Color.BOLD + accent());
-        if (game != null) {
-            drawMatchPanel();
-            drawPlayerCard(0, 3, (height - 7) / 2);
-            drawPlayerCard(1, 4 + (height - 7) / 2, height - 4 - (4 + (height - 7) / 2));
-            box(2, 8, leftWidth, 3, "Info", message.isEmpty() ? MUTED : accent());
-            label(4, 9, fit(message.isEmpty() ? hint() : message, leftWidth - 4), message.isEmpty() ? MUTED : WHITE);
-        }
-
-        switch (screen) {
-            case WELCOME -> drawWelcome();
-            case NAMES -> drawNames();
-            case HOME -> drawHome();
-            case DETAIL -> drawDetail();
-            case HELP -> drawHelp();
-            case HISTORY -> drawHistory();
-            case PLAYER -> drawPlayerDetail();
-        }
-
-        drawUtilities();
-        tui.setLayer(0);
-        // Po clear() maji prvky nove instance. Vyber proto hledame podle textu a souradnic.
-        // Zachovame jej jen ve stejnem pohledu nebo pri navratu z napovedy.
-        MiniTui.Element restore = null;
-        if (requestedFocus != null) {
-            restore = tui.getElements().stream().filter(element -> element.focusable && element.x == requestedX
-                    && element.y == requestedY && element.getText().equals(requestedFocus)).findFirst().orElse(null);
-            requestedFocus = null;
-        } else if (oldFocus != null && screen == lastDrawnScreen
-                && (game == null || game.getCurrentIndex() == lastDrawnActor && game.getPhase() == lastDrawnPhase)) {
-            restore = tui.getElements().stream().filter(element -> element.focusable && element.x == oldFocus.x
-                    && element.y == oldFocus.y && element.getText().equals(oldFocus.getText())).findFirst().orElse(null);
-        }
-        if (restore == null) restore = tui.getElements().stream().filter(element -> element.focusable && (element instanceof MiniTui.Input
-                || element instanceof MiniTui.TableRow)).findFirst().orElse(null);
-        if (restore == null) restore = tui.getElements().stream().filter(element -> element instanceof MiniTui.Button button && button.primary)
-                .findFirst().orElse(null);
-        if (restore != null) tui.focus(restore);
-        lastDrawnScreen = screen;
-        lastDrawnActor = game == null ? -1 : game.getCurrentIndex();
-        lastDrawnPhase = game == null ? null : game.getPhase();
+        checkTerminalSize();
     }
 
-    // ------------------------------------ text zahlavi a napovedy aktualni faze ------------------------------------
+    private void moveElements(List<MiniTui.Element> elements, boolean visible) {
+        // Menime z a viditelnost existujicich objektu; dalsi kopie prvku nevznikaji.
+        for (MiniTui.Element element : elements) {
+            element.z = layer;
+            element.visible = visible;
+        }
+    }
 
-    private String header() {
-        if (screen == Screen.WELCOME) return "DUEL 1V1";
-        if (screen == Screen.NAMES) return "Kdo bude hrát?";
-        if (game == null) return "Návod";
+    // ------------------------------------ spolecny panel ukazuje aktualni stav zapasu ------------------------------------
+
+    private void updateMatch() {
         String phase = switch (game.getPhase()) {
-            case ANNOUNCEMENT -> "Obchod";
-            case SHOP -> "Obchod";
-            case COMBAT -> game.isPreparation() ? "Příprava"
-                    : "Kolo " + game.getCombatRound() + " (" + game.getTurnPosition() + "/2)";
+            case ANNOUNCEMENT, SHOP -> "Obchod";
+            case COMBAT -> game.isPreparation() ? "Příprava" : "Kolo " + game.getCombatRound() + " (" + game.getTurnPosition() + "/2)";
             case RESULT -> "Výsledek";
             case FINISHED -> "Vítěz zápasu";
         };
-        String owner = game.getPhase() == Game.Phase.SHOP || game.getPhase() == Game.Phase.COMBAT
-                ? "  ·  " + game.getCurrentPlayer().getName() : "";
-        return "Souboj " + game.getBattle() + "  /  " + phase + owner;
-    }
-
-    private String hint() {
-        return switch (game.getPhase()) {
-            case COMBAT -> "Naplánuj akce. Provedou se až po potvrzení konce tahu.";
-            case SHOP, ANNOUNCEMENT -> "Vyber předmět pro popis. Pokračovat předá hru dál.";
-            case RESULT -> "Souboj skončil. Pokračuj do dalšího obchodu.";
-            case FINISHED -> "Zápas skončil. Můžeš začít nový zápas.";
-        };
-    }
-
-    // ------------------------------------ trvale panely zapasu a hracu ------------------------------------
-
-    private void drawMatchPanel() {
-        box(2, 3, leftWidth, 4, "Zápas · výhry", accent());
-        int half = (leftWidth - 4) / 2;
+        menuHeading.setText(fit("Souboj " + game.getBattle() + " / " + phase + " · " + game.getCurrentPlayer().getName(), 132));
+        matchScorePanel.title = fit(game.getPlayer(0).getName() + " " + game.getWins(0) + ":" + game.getWins(1) + " " + game.getPlayer(1).getName(), 90);
+        matchMessage.setText(fit(message.isEmpty() ? "Obchod: " + game.getPlayer(game.getShopStarter()).getName()
+                + " · Boj: " + game.getPlayer(game.getCombatStarter()).getName() : message, 92));
         for (int index = 0; index < 2; index++) {
-            int x = 4 + index * half;
-            label(x, 4, fit(game.getPlayer(index).getName(), half - 8), playerColor(index));
-            label(x + half - 7, 4, game.getWins(index) + " / " + GameRules.WINS_REQUIRED, WHITE);
-        }
-        label(4, 5, fit("Obchod: " + game.getPlayer(game.getShopStarter()).getName(), half - 1), MUTED);
-        label(4 + half, 5, fit("Boj: " + game.getPlayer(game.getCombatStarter()).getName(), half - 1), MUTED);
-    }
-
-    private void drawPlayerCard(int index, int y, int cardHeight) {
-        Player player = game.getPlayer(index);
-        String color = playerColor(index);
-        box(rightX, y, rightWidth, cardHeight, fit(player.getName(), rightWidth - 7), color);
-        int x = rightX + 2;
-        int row = y + 1;
-        label(x, row++, "Životy  " + player.getHealth() + " / " + Player.MAX_HEALTH, color);
-        // vydrz patri k aktualnimu rozhodovani ve vybave a ne do karty soupere
-        if (game.getPhase() != Game.Phase.COMBAT) label(x, row++, "Zlato   " + player.getGold(), GOLD);
-        label(x, row++, "Štít    " + player.getShield(), WHITE);
-        label(x, row++, fit("Zbroj: " + ownedName(player.getEquipment().getEquippedArmor()), rightWidth - 4), MUTED);
-        label(x, row++, fit("Talisman: " + ownedName(player.getEquipment().getEquippedTrinket()), rightWidth - 4), MUTED);
-        int room = Math.max(0, y + cardHeight - 2 - row);
-        boolean moreEffects = player.getEffects().size() > room;
-        int visibleEffects = moreEffects ? Math.max(0, room - 1) : room;
-        if (player.getEffects().isEmpty() && room > 0) label(x, row, "Žádné trvající účinky", MUTED);
-        for (int i = 0; i < Math.min(visibleEffects, player.getEffects().size()); i++)
-            label(x, row + i, fit(text.effect(player.getEffects().get(i)), rightWidth - 4), WHITE);
-        if (moreEffects) label(x, row + visibleEffects, "+" + (player.getEffects().size() - visibleEffects) + " dalších účinků", MUTED);
-        button(x, y + cardHeight - 2, "Podrobnosti", () -> {
-            selectedPlayer = index;
-            open(Screen.PLAYER);
-        }).colorCode = color;
-    }
-
-    private String ownedName(Item item) {
-        return item == null ? "—" : text.name(item);
-    }
-
-    // ------------------------------------ ovladani napovedy, historie a navratu ------------------------------------
-
-    private void drawUtilities() {
-        button(2, height - 2, "F1  Návod", () -> open(Screen.HELP)).colorCode = MUTED;
-        if (game != null) button(width - 25, height - 2, "L  Historie", () -> open(Screen.HISTORY)).colorCode = MUTED;
-        if (!views.isEmpty()) button(width / 2 - 6, height - 2, "Esc  Zpět", this::back).colorCode = MUTED;
-    }
-
-    // ------------------------------------ uvodni obrazovka a zadavani jmen ------------------------------------
-
-    private void drawWelcome() {
-        int x = width / 2 - 30;
-        box(x, 7, 60, 9, "Duel 1V1", WHITE);
-        primary(x + 4, 11, "Začít", () -> {
-            screen = Screen.NAMES;
-            draw();
-        });
-
-    }
-
-    private void drawNames() {
-        int x = width / 2 - 30;
-        box(x, 7, 60, 15, "Jména hráčů", WHITE);
-        firstName = tui.add(new MiniTui.Input(x + 3, 10, 0, "Hráč 1", firstValue, 30));
-        secondName = tui.add(new MiniTui.Input(x + 3, 13, 0, "Hráč 2", secondValue, 30));
-        label(x + 4, 9, "Oranžová", ORANGE);
-        label(x + 4, 12, "Mátová", MINT);
-        primary(x + 4, 17, "Připraveni — do obchodu", () -> {
-            saveNames();
-            game = new Game(firstValue, secondValue, new Random());
-            game.openShop(); // poradi ukaze trvaly panel a nepotrebuje vlastni potvrzovaci menu
-            home();
-        });
-    }
-
-    // ------------------------------------ zahlavi tabulek ------------------------------------
-
-    private void tableHeading(int x, int y, List<String> names, List<Integer> widths, List<String> colors) {
-        MiniTui.TableRow heading = tui.add(new MiniTui.TableRow(x, y, 0, "", names, widths, colors, null));
-        heading.focusable = false; // zahlavi sdili presne stejne hranice sloupcu jako data
-    }
-
-    // ------------------------------------ vyber obsahu podle faze zapasu ------------------------------------
-
-    private void drawHome() {
-        switch (game.getPhase()) {
-            case ANNOUNCEMENT -> {
-                game.openShop();
-                drawHome();
-            }
-            case SHOP -> drawShop();
-            case COMBAT -> drawCombat();
-            case RESULT, FINISHED -> drawResult();
+            Player player = game.getPlayer(index);
+            MiniTui.Label[] stats = matchPlayerStats[index];
+            stats[0].setText(fit(player.getName(), 28));
+            stats[1].setText("Životy " + player.getHealth() + "/" + Player.MAX_HEALTH);
+            stats[2].setText("Štít " + player.getShield() + " · Zlato " + player.getGold());
+            stats[3].setText(fit("Zbroj: " + ownedName(player.getEquipment().getEquippedArmor()), 28));
+            stats[4].setText(fit("Talisman: " + ownedName(player.getEquipment().getEquippedTrinket()), 28));
+            stats[5].setText(player.getEffects().isEmpty() ? "Žádné trvající účinky" : fit(text.effect(player.getEffects().get(0)), 28));
+            stats[6].setText(player.getEffects().size() > 1 ? "+" + (player.getEffects().size() - 1) + " dalších účinků" : "");
         }
     }
 
-    // ------------------------------------ obchod, inventar a predani nakupovani ------------------------------------
+    // ------------------------------------ doplneni existujicich radku obchodu a inventare ------------------------------------
 
-    private void drawShop() {
-        int y = contentY();
-        int h = contentHeight();
-        box(2, y, leftWidth, h, (inventoryView ? "Inventář" : "Obchod")
-                + " — " + game.getCurrentPlayer().getGold() + " zlata", accent());
-        button(4, y + 1, "Obchod", () -> {
-            inventoryView = false;
-            page = 0;
-            draw();
-        });
-        button(23, y + 1, "Inventář", () -> {
-            inventoryView = true;
-            page = 0;
-            draw();
-        });
-
-        List<Item> items = inventoryView ? game.getCurrentPlayer().getInventory() : new ArrayList<>(game.getShop().getStock().keySet());
-        // Vyska panelu urcuje pocet nabidek na strance; sedm radku patri ovladani a okrajum.
-        int size = Math.max(1, h - 7);
-        page = Math.min(page, pages(items.size(), size) - 1);
-        int nameWidth = Math.min(26, Math.max(15, leftWidth / 3));
-        int effectWidth = Math.min(34, leftWidth - nameWidth - 23);
-        int[] columns = {
-            nameWidth, effectWidth, 8, 5
-        };
-        tableHeading(4, y + 3, List.of("Předmět", "Účinek", "Zlato", inventoryView ? "" : "Ks"),
-                List.of(columns[0], columns[1], columns[2], columns[3]), List.of(MUTED, MUTED, GOLD, MINT));
-
-        for (int row = 0, index = page * size; row < size && index < items.size(); row++, index++) {
-            Item item = items.get(index);
-            int stock = inventoryView ? 1 : game.getShop().getStock().get(item);
-            boolean affordable = item.getPrice() <= game.getCurrentPlayer().getGold();
-            String name = text.name(item) + (inventoryView && game.getCurrentPlayer().getEquipment().isEquipped(item) ? " *" : "");
-            List<String> cells = List.of(name, text.summary(item), Integer.toString(inventoryView ? item.getPrice() / 2 : item.getPrice()), inventoryView ? "" : Integer.toString(stock));
-            MiniTui.TableRow control = tui.add(new MiniTui.TableRow(4, y + 4 + row, 0, text.name(item), cells,
-                    List.of(columns[0], columns[1], columns[2], columns[3]),
-                    List.of(stock == 0 ? MUTED : WHITE, MUTED, affordable || inventoryView ? GOLD : RED, stock > 0 ? MINT : RED),
-                    () -> inspect(item, !inventoryView)));
-            control.colorCode = accent();
-            control.backgroundCode = index % 2 == 1 ? MiniTui.Color.background(32, 36, 44) : "";
-        }
-
-        if (items.isEmpty()) label(5, y + 5, "Inventář je prázdný.", MUTED);
-        pagination(items.size(), size, 4, y + h - 2);
-
-        String next = game.willStartBattleOnContinue() ? "Zahájit souboj"
-                : "Pokračovat → " + game.getOpponent().getName();
-        primary(4, height - 4, next, () -> {
-            game.continueShop();
-            message = "";
-            inventoryView = false;
-            home();
-        });
+    private void updateShop() {
+        Player player = game.getCurrentPlayer();
+        shopPanel.title = (shopInventoryOpen ? "Inventář" : "Obchod") + " — " + player.getGold() + " zlata";
+        shopColumnsLabel.setText(formatShopRow("Předmět", "Účinek", "Cena", shopInventoryOpen ? "Vybaveno" : "Zásoba"));
+        updateShopRows(shopOfferButtons, new ArrayList<>(game.getShop().getStock().keySet()), !shopInventoryOpen, true);
+        updateShopRows(shopInventoryButtons, player.getInventory(), shopInventoryOpen, false);
+        shopContinueButton.setText(game.willStartBattleOnContinue() ? "Zahájit souboj" : "Pokračovat → " + game.getOpponent().getName());
     }
 
-    // ------------------------------------ detail predmetu a jeho dostupne akce ------------------------------------
+    private void updateShopRows(MiniTui.Button[] buttons, List<Item> items, boolean visible, boolean offers) {
+        for (int row = 0; row < buttons.length; row++) {
+            MiniTui.Button button = buttons[row];
+            button.visible = visible && row < items.size();
+            if (!button.visible) continue;
 
-    private void inspect(Item item, boolean offer) {
-        selectedItem = item;
-        shopItem = offer;
-        open(Screen.DETAIL);
-    }
-
-    private void drawDetail() {
-        if (selectedItem == null && game.getPhase() != Game.Phase.COMBAT) {
-            back();
-            return;
-        }
-        int y = contentY();
-        int h = contentHeight();
-        box(2, y, leftWidth, h, text.name(selectedItem) + (game.getPhase() == Game.Phase.COMBAT
-                ? " — výdrž " + game.getCurrentPlayer().getStamina() + "/" + game.getCurrentPlayer().getMaxStamina() : ""), accent());
-        List<String> lines = wrap(text.description(selectedItem), leftWidth - 6);
-        int size = Math.max(1, h - 5);
-        textPage(lines, 5, y + 2, size);
-        pagination(lines.size(), size, 4, y + h - 2);
-        if (game.getPhase() == Game.Phase.SHOP) {
-            if (shopItem) {
-                int stock = game.getShop().getStock().getOrDefault(selectedItem, 0);
-                String reason = stock == 0 ? "Vyprodáno"
-                        : selectedItem.getPrice() > game.getCurrentPlayer().getGold() ? "Nedostatek zlata"
-                        : game.getCurrentPlayer().getInventory().size() >= game.getCurrentPlayer().getInventorySize()
-                                ? "Plný inventář" : "";
-                MiniTui.Button buy = button(4, height - 4, reason.isEmpty() ? "Koupit za " + selectedItem.getPrice() : reason,
-                        () -> {
-                            message = game.buy(selectedItem);
-                            draw();
-                        });
-                buy.enabled = reason.isEmpty();
-                buy.primary = true;
-            } else {
-                button(4, height - 4, "Prodat za " + selectedItem.getPrice() / 2, () -> {
-                    message = game.sell(selectedItem);
-                    if (!game.getCurrentPlayer().getInventory().contains(selectedItem)) back();
-                    else draw();
-                });
-                if (selectedItem.isEquipment()) button(Math.max(25, leftWidth / 2), height - 4,
-                        "Vybavit / sundat", () -> {
-                            message = game.equip(selectedItem);
-                            draw();
-                        });
-            }
-        } else if (game.getPhase() == Game.Phase.COMBAT && (selectedItem == null || !selectedItem.isEquipment())) {
-            Player.Action action = selectedItem == null ? Player.Action.attack() : Player.Action.use(selectedItem);
-            boolean reserved = selectedItem != null && selectedItem.isConsumable()
-                    && game.getCurrentPlayer().getActions().stream().anyMatch(entry -> entry.item() == selectedItem);
-            String reason = reserved ? "Tento kus už je v plánu"
-                    : game.isPreparation() && (selectedItem == null || selectedItem.getItemType() == ItemType.DAMAGE)
-                            ? "Útoky jsou dostupné po přípravě"
-                            : game.getActionCost(action) > game.getCurrentPlayer().getStamina()
-                                    ? "Nedostatek výdrže" : "";
-            MiniTui.Button add = button(4, height - 4, reason.isEmpty()
-                    ? "Přidat do plánu · " + game.getActionCost(action) + " výdrže" : reason,
-                    () -> {
-                        message = game.act(action);
-                        draw();
-                    });
-            add.primary = true;
-            add.enabled = reason.isEmpty();
+            // Stejna tlacitka pri dalsi navsteve obchodu dostanou novy text a novou akci.
+            Item item = items.get(row);
+            int price = offers ? item.getPrice() : item.getPrice() / 2;
+            String quantity = offers ? game.getShop().getStock().get(item) + " ks"
+                    : (game.getCurrentPlayer().getEquipment().isEquipped(item) ? "*" : "");
+            button.setText(formatShopRow(item.getName(), text.summary(item), price + " zl.", quantity));
+            button.action = () -> inspect(item, offers);
         }
     }
 
-    // ------------------------------------ bojova vybava, plan akci a potvrzeni tahu ------------------------------------
+    // ------------------------------------ mezery drzi nazvy, ucinky a ceny ve stejnych sloupcich ------------------------------------
 
-    private void drawCombat() {
-        Player actor = game.getCurrentPlayer();
-        int y = contentY();
-        int h = contentHeight();
-        int toolkitHeight = Math.max(7, h / 2);
-        int planY = y + toolkitHeight + 1;
-        int planHeight = h - toolkitHeight - 1;
-        box(2, y, leftWidth, toolkitHeight, "Výbava — výdrž "
-                + actor.getStamina() + "/" + actor.getMaxStamina(), accent());
-        // null zastupuje pest: nema fyzicky predmet v inventari.
+    private String formatShopRow(String name, String effect, String price, String quantity) {
+        // %-24s a %-32s doplni mezery vpravo, %7s zarovna cenu doprava.
+        // fit() nejdrive zkrati dlouhy text, aby neposunul dalsi sloupec.
+        return String.format("%-24s | %-32s | %7s | %s", fit(name, 24), fit(effect, 32), price, quantity);
+    }
+
+    // ------------------------------------ vybava ukazuje cenu, o platnosti pokusu rozhoduje hra ------------------------------------
+
+    private void updateCombat() {
+        Player player = game.getCurrentPlayer();
+        combatEquipmentPanel.title = "Výbava — výdrž " + player.getStamina() + "/" + player.getMaxStamina();
+
+        // Levy seznam obsahuje aktivni predmety vcetne pesti; zbroj a talisman jsou pasivni.
         List<Item> items = new ArrayList<>();
-        items.add(null);
-        items.addAll(actor.getInventory().stream().filter(item -> !item.isEquipment()).toList());
-        int size = Math.max(1, toolkitHeight - 4);
-        page = Math.min(page, pages(items.size(), size) - 1);
+        for (Item item : player.getInventory()) if (!item.isEquipment()) items.add(item);
+        for (int row = 0; row < combatEquipmentButtons.length; row++) {
+            MiniTui.Button button = combatEquipmentButtons[row];
+            button.visible = row < items.size();
+            if (!button.visible) continue;
+            Item item = items.get(row);
+            combatEquipmentItems[row] = item;
+            button.setText(fit(item.getName(), 24) + " · " + game.getActionCost(item) + " výd.");
+        }
 
-        for (int row = 0, index = page * size; row < size && index < items.size(); row++, index++) {
-            Item item = items.get(index);
-            Player.Action action = item == null ? Player.Action.attack() : Player.Action.use(item);
-            boolean hostile = item == null || item.getItemType() == ItemType.DAMAGE;
-            int cost = game.getActionCost(action);
-            boolean reserved = item != null && item.isConsumable() && actor.getActions().stream().anyMatch(entry -> entry.item() == item);
-            String unavailable = reserved ? "v plánu" : game.isPreparation() && hostile ? "po přípravě"
-                    : cost > actor.getStamina() ? "málo výdrže" : "";
-            String summary = item == null ? GameRules.BASIC_DAMAGE + " fyzické" : text.summary(item);
-            int nameWidth = Math.min(26, Math.max(15, leftWidth / 3));
-            MiniTui.TableRow control = tui.add(new MiniTui.TableRow(4, y + 1 + row + (page == 0 && row > 0 ? 1 : 0), 0, text.name(item),
-                    List.of(text.name(item), summary, unavailable.isEmpty() ? cost + " výd." : unavailable),
-                    List.of(nameWidth, Math.min(34, leftWidth - nameWidth - 26), 17),
-                    List.of(WHITE, MUTED, unavailable.isEmpty() ? MINT : MUTED), () -> {
-                        message = game.act(action);
-                        planPage = Math.max(0, (actor.getActions().size() - 1) / Math.max(1, planHeight - 5));
-                        draw();
-                    }));
-            control.enabled = unavailable.isEmpty();
-            toolkitRows.put(control, item);
-            control.colorCode = accent();
-            control.backgroundCode = index % 2 == 1 ? MiniTui.Color.background(32, 36, 44) : "";
+        // Pravy seznam je jen viditelny vyrez celeho planu. Jeho ulozeny obsah se zde nemeni.
+        List<Item> plan = player.getActions();
+        int pages = Math.max(1, (plan.size() + PLAN_ROWS - 1) / PLAN_ROWS);
+        // Po odebrani posledni akce na strance se vratime na nejblizsi existujici stranku.
+        combatPlanPage = Math.max(0, Math.min(combatPlanPage, pages - 1));
+        for (int row = 0; row < combatPlanButtons.length; row++) {
+            int index = combatPlanPage * PLAN_ROWS + row;
+            combatPlanButtons[row].visible = index < plan.size();
+            if (index < plan.size()) combatPlanButtons[row].setText((index + 1) + ". "
+                    + fit(plan.get(index).getName(), 25) + " · " + game.getPlannedActionCost(index));
         }
-        if (page == 0) label(5, y + 2, "─".repeat(Math.max(1, leftWidth - 6)), MUTED);
-        pagination(items.size(), size, 4, y + toolkitHeight - 2);
-        box(2, planY, leftWidth, planHeight, "Plán — provede se shora dolů", accent());
-
-        List<Player.Action> plan = actor.getActions();
-        int planRows = Math.max(1, planHeight - 5);
-        planPage = Math.min(planPage, pages(plan.size(), planRows) - 1);
-        int offset = planPage * planRows;
-        int planNameWidth = Math.min(26, Math.max(12, leftWidth / 3));
-        tableHeading(4, planY + 1, List.of("#", "Akce", "Účinek", "Výdrž"),
-                List.of(3, planNameWidth, Math.min(34, leftWidth - planNameWidth - 20), 7), List.of(MUTED, MUTED, MUTED, MINT));
-        for (int i = offset; i < Math.min(plan.size(), offset + planRows); i++) {
-            final int index = i;
-            Player.Action action = plan.get(i);
-            String name = text.name(action.basicAttack() ? null : action.item());
-            int nameWidth = Math.min(26, Math.max(12, leftWidth / 3));
-            MiniTui.TableRow row = tui.add(new MiniTui.TableRow(4, planY + 2 + i - offset, 0, (i + 1) + ". " + name,
-                    List.of((i + 1) + ".", name, text.summary(action.basicAttack() ? null : action.item()), Integer.toString(game.getPlannedActionCost(i))),
-                    List.of(3, nameWidth, Math.min(34, leftWidth - nameWidth - 20), 7),
-                    List.of(MUTED, selectedPlan == i ? accent() : WHITE, MUTED, MINT),
-                    () -> {
-                        selectedPlan = index;
-                        draw();
-                    }));
-            row.colorCode = accent();
-            row.backgroundCode = i % 2 == 1 ? MiniTui.Color.background(32, 36, 44) : "";
-        }
-        if (plan.isEmpty()) label(5, planY + 2, "Zatím žádné akce. Vyber je ve výbavě.", MUTED);
-        if (!plan.isEmpty()) {
-            if (pages(plan.size(), planRows) > 1) {
-                if (planPage > 0) button(4, planY + planHeight - 3, "←", () -> {
-                    planPage--;
-                    draw();
-                });
-                label(12, planY + planHeight - 3, (planPage + 1) + "/" + pages(plan.size(), planRows), MUTED);
-                if (planPage + 1 < pages(plan.size(), planRows)) button(23, planY + planHeight - 3, "→", () -> {
-                    planPage++;
-                    draw();
-                });
-            }
-            int row = planY + planHeight - 2;
-            button(4, row, "Odebrat", () -> {
-                game.removePlannedAction(selectedPlan < 0 ? plan.size() - 1 : selectedPlan);
-                selectedPlan = -1;
-                draw();
-            });
-        }
-        primary(4, height - 4, "Provést plán a ukončit tah", () -> {
-            game.endTurn();
-            message = "";
-            page = 0;
-            selectedPlan = -1;
-            home();
-        });
-        label(Math.max(40, leftWidth - 15), height - 4, "I: popis", MUTED);
+        combatPlanPreviousButton.visible = combatPlanPage > 0;
+        combatPlanNextButton.visible = combatPlanPage + 1 < pages;
+        combatPlanPageLabel.setText(pages > 1 ? (combatPlanPage + 1) + "/" + pages : "");
     }
 
-    // ------------------------------------ vysledek souboje a novy zapas ------------------------------------
+    // ------------------------------------ detail predmetu a udaje hrace ------------------------------------
 
-    private void drawResult() {
-        int y = contentY();
-        box(2, y, leftWidth, contentHeight(), "Výsledek souboje", WHITE);
-        label(5, y + 2, fit("Vítězí " + game.getPlayer(game.getWinner()).getName(), leftWidth - 6), MiniTui.Color.BOLD + playerColor(game.getWinner()));
-        for (int index = 0; index < 2; index++) {
-            int reward = index == game.getWinner() ? GameRules.WIN_REWARD : GameRules.LOSS_REWARD;
-            label(5, y + 5 + index * 2, fit(game.getPlayer(index).getName() + "  +" + reward + " zlata", leftWidth - 6), GOLD);
-        }
-        if (game.getPhase() == Game.Phase.FINISHED) {
-            primary(4, height - 4, "Nový zápas", () -> {
-                game = null;
-                screen = Screen.WELCOME;
-                views.clear();
-                message = "";
-                draw();
-            });
-        } else {
-            primary(4, height - 4, "Pokračovat do obchodu", () -> {
-                game.nextBattle();
-                game.openShop();
-                message = "";
-                inventoryView = false;
-                home();
-            });
-        }
+    private void updateDetail() {
+        boolean shopping = game.getPhase() == Game.Phase.SHOP;
+        detailBuyButton.visible = shopping && detailIsOffer;
+        detailSellButton.visible = shopping && !detailIsOffer;
+        detailEquipButton.visible = detailSellButton.visible && detailItem.isEquipment();
+        detailAddButton.visible = game.getPhase() == Game.Phase.COMBAT && !detailItem.isEquipment();
+        detailBuyButton.setText("Koupit za " + detailItem.getPrice());
+        detailSellButton.setText("Prodat za " + detailItem.getPrice() / 2);
+        if (detailAddButton.visible) detailAddButton.setText("Přidat do plánu · " + game.getActionCost(detailItem) + " výdrže");
+        updateDocument(detailItem.getName(), wrapText(List.of(text.description(detailItem))));
     }
 
-    // ------------------------------------ uplny stav hrace ------------------------------------
-
-    private void drawPlayerDetail() {
-        Player player = game.getPlayer(selectedPlayer);
-        List<String> paragraphs = new ArrayList<>();
-        paragraphs.add(player.getName());
-        paragraphs.add("Životy: " + player.getHealth() + "/" + Player.MAX_HEALTH
-                + "  Výdrž: " + player.getStamina() + "/" + player.getMaxStamina());
-        paragraphs.add("Zlato: " + player.getGold());
-        paragraphs.add("Příští tah navíc: " + player.getNextStamina());
-        List<Damage> effects = player.getEffects();
-        if (effects.isEmpty()) paragraphs.add("Žádné trvající účinky.");
-        else {
-            paragraphs.add("Účinky · čísla označují pořadí působení");
-            boolean damage = effects.stream().anyMatch(effect -> effect.getType() != Damage.DamageType.HEAL);
-            if (damage) paragraphs.add("Poškození:");
-            for (int i = 0; i < effects.size(); i++)
-                if (effects.get(i).getType() != Damage.DamageType.HEAL) paragraphs.add("  " + (i + 1) + ". " + text.effect(effects.get(i)));
-            boolean healing = effects.stream().anyMatch(effect -> effect.getType() == Damage.DamageType.HEAL);
-            if (healing) paragraphs.add("Léčení:");
-            for (int i = 0; i < effects.size(); i++)
-                if (effects.get(i).getType() == Damage.DamageType.HEAL) paragraphs.add("  " + (i + 1) + ". " + text.effect(effects.get(i)));
-        }
-        paragraphs.add("Vybavení a inventář:");
-        for (Item item : player.getInventory()) paragraphs.add(text.name(item) + " — " + text.summary(item)
+    private void updatePlayerDetails() {
+        Player player = game.getPlayer(playerDetailsIndex);
+        List<String> details = new ArrayList<>(List.of(player.getName(),
+                "Životy: " + player.getHealth() + "/" + Player.MAX_HEALTH,
+                "Výdrž: " + player.getStamina() + "/" + player.getMaxStamina(),
+                "Příští tah navíc: " + player.getNextStamina(), "Zlato: " + player.getGold(), "Účinky:"));
+        for (Damage effect : player.getEffects()) details.add(text.effect(effect));
+        details.add("Vybavení a inventář:");
+        for (Item item : player.getInventory()) details.add(item.getName() + " — " + text.summary(item)
                 + (player.getEquipment().isEquipped(item) ? " [vybaveno]" : ""));
-        document(player.getName(), paragraphs);
+        updateDocument("Podrobnosti hráče", wrapText(details));
     }
 
-    // ------------------------------------ historie hernich udalosti ------------------------------------
+    // ------------------------------------ zalomeni textu a zobrazeni jedne stranky ------------------------------------
 
-    private void drawHistory() {
-        List<String> lines = new ArrayList<>(game.getLog());
-        java.util.Collections.reverse(lines);
-        document("Historie — nejnovější nahoře", lines);
-    }
-
-    // ------------------------------------ obsah a strankovani navodu ------------------------------------
-
-    private void drawHelp() {
-        List<String> titles = List.of("Začni tady", "Obchod a peníze",
-                "Plánování tahu", "Pořadí účinků",
-                "Poškození a obrana", "Zápas a vybavení");
-        List<List<String>> topics = List.of(
-                List.of("1. Nakup zbraň a pár užitečných předmětů.",
-                        "2. V obchodě vybav zbroj a talisman, potom pokračuj.",
-                        "3. Při boji přidej akce do plánu v požadovaném pořadí.",
-                        "4. Potvrď konec tahu. Teprve teď se plán provede.",
-                        "Barva záhlaví ukazuje aktivního hráče. Vpravo stále vidíš oba hráče."),
-                List.of("Oba hráči nakupují ze stejné zásoby. Nákup ji sníží; prodej předmět odstraní.",
-                        "Prodej vrací polovinu ceny zaokrouhlenou dolů.",
-                        "Pokud oba hráči za sebou pokračují bez nákupu nebo prodeje, začne souboj."),
-                List.of("Výdrž se rezervuje při přidání akce. Životy ani účinky se zatím nemění.",
-                        "Akce se provedou v pořadí přidání. Vybranou akci můžeš odebrat.",
-                        "Pěst je vždy dostupná, ale stojí výdrž. V popisu vidíš i zdražení opakovaného použití."),
-                List.of("Každý dostane přípravný tah bez útoků. Pak začíná kolo 1: první a druhý hráč.",
-                        "Na začátku vlastního tahu působí talisman a trvající účinky v pořadí vzniku.",
-                        "Na konci tahu se plán provede shora dolů. Smrt okamžitě ukončí souboj."),
-                List.of("Fyzický útok zasáhne při provedení plánu. Jed a oheň působí na začátku dalších tahů cíle.",
-                        "Zápis Jed: 4 × 3 (12) znamená sílu 4 na 3 tahy, celkem 12. Po změně účinku může být místo násobení vypsaná posloupnost dávek.",
-                        "Oheň slučuje zbývající součty a ponechá delší trvání. Jedy zůstávají samostatné.",
-                        "Nejprve brání zbroj, pak štít. Vše se zaokrouhluje na nejbližší celé číslo; prodejní ceny dolů."),
-                List.of("Tři vyhrané souboje znamenají vítězství v zápase.",
-                        "Zlato a nevyužité vybavení zůstávají. Zdraví a bojové stavy se obnoví.",
-                        "Na sobě můžeš mít jednu zbroj a jeden talisman. Brašna zvětší inventář při vybavení."));
-        page = Math.max(0, Math.min(page, topics.size() - 1));
-        int x = 2;
-        int y = contentY();
-        int w = game == null ? width - 4 : leftWidth;
-        box(x, y, w, contentHeight(), "Návod · " + (page + 1) + "/" + topics.size() + " · " + titles.get(page), WHITE);
+    private List<String> wrapText(List<String> paragraphs) {
         List<String> lines = new ArrayList<>();
-        for (String paragraph : topics.get(page)) {
-            lines.addAll(wrap(paragraph, w - 6));
-            lines.add("");
-        }
-        int size = Math.max(1, contentHeight() - 4);
-        int slices = pages(lines.size(), size);
-        helpSlice = Math.min(helpSlice, slices - 1);
-        for (int row = 0, index = helpSlice * size; row < size && index < lines.size(); row++, index++)
-            label(x + 3, y + 2 + row, lines.get(index), WHITE);
-        if (helpSlice > 0 || page > 0) button(4, height - 4,
-                helpSlice > 0 ? "← Předchozí část" : "← Předchozí téma", () -> {
-                    if (helpSlice > 0) helpSlice--;
-                    else {
-                        page--;
-                        helpSlice = 0;
+        for (String paragraph : paragraphs) {
+            for (String original : paragraph.split("\\R", -1)) {
+                String line = "";
+                for (String word : original.split(" ")) {
+                    if (!line.isEmpty() && line.length() + word.length() + 1 > 91) {
+                        lines.add(line);
+                        line = "";
                     }
-                    draw();
-                });
-        if (helpSlice + 1 < slices || page < topics.size() - 1) primary(Math.max(27, w - 28), height - 4,
-                helpSlice + 1 < slices ? "Pokračovat v tématu →" : "Další téma →", () -> {
-                    if (helpSlice + 1 < slices) helpSlice++;
-                    else {
-                        page++;
-                        helpSlice = 0;
-                    }
-                    draw();
-                });
-    }
-
-    // ------------------------------------ zobrazeni dlouhych textu ------------------------------------
-
-    private void document(String title, List<String> paragraphs) {
-        int y = contentY();
-        int h = contentHeight();
-        box(2, y, leftWidth, h, title, accent());
-        List<String> lines = new ArrayList<>();
-        for (String paragraph : paragraphs) lines.addAll(wrap(paragraph, leftWidth - 6));
-        int size = Math.max(1, h - 4);
-        textPage(lines, 5, y + 2, size);
-        pagination(lines.size(), size, 4, y + h - 2);
-    }
-
-    private void textPage(List<String> lines, int x, int y, int size) {
-        page = Math.min(page, pages(lines.size(), size) - 1);
-
-        for (int row = 0, index = page * size; row < size && index < lines.size(); row++, index++) label(x, y + row, lines.get(index), WHITE);
-    }
-
-    // ------------------------------------ strankovaci tlacitka ------------------------------------
-
-    private void pagination(int count, int size, int x, int y) {
-        int pages = pages(count, size);
-        if (pages < 2) return; // jedinou stranku nema smysl prezentovat jako volbu
-        if (page > 0) button(x, y, "←", () -> {
-            page--;
-            draw();
-        });
-        label(x + 9, y, (page + 1) + " / " + pages, MUTED);
-        if (page + 1 < pages) button(x + 21, y, "→", () -> {
-            page++;
-            draw();
-        });
-    }
-
-    // ------------------------------------ zalamovani odstavcu do radku ------------------------------------
-
-    private List<String> wrap(String value, int columns) {
-        List<String> lines = new ArrayList<>();
-        for (String paragraph : value.split("\\R", -1)) {
-            StringBuilder line = new StringBuilder();
-            for (String word : paragraph.split(" ")) {
-                if (line.length() > 0 && line.length() + word.length() + 1 > columns) {
-                    lines.add(line.toString());
-                    line.setLength(0);
+                    if (!line.isEmpty()) line += " ";
+                    line += word;
                 }
-                if (line.length() > 0) line.append(' ');
-                line.append(word);
+                lines.add(line);
             }
-            lines.add(line.toString());
+            lines.add("");
         }
         return lines;
     }
 
-    // ------------------------------------ spusteni aplikace ------------------------------------
+    private void updateDocument(String title, List<String> lines) {
+        documentPanel.title = title;
+        int pages = Math.max(1, (lines.size() + TEXT_ROWS - 1) / TEXT_ROWS);
+        documentPages[layer] = Math.max(0, Math.min(documentPages[layer], pages - 1));
+        for (int row = 0; row < TEXT_ROWS; row++) {
+            int index = documentPages[layer] * TEXT_ROWS + row;
+            documentRows[row].setText(index < lines.size() ? lines.get(index) : "");
+        }
+        documentPreviousButton.visible = documentPages[layer] > 0;
+        documentNextButton.visible = documentPages[layer] + 1 < pages;
+        documentPageLabel.setText(pages > 1 ? (documentPages[layer] + 1) + "/" + pages : "");
+    }
 
-    public static void main(String[] args) {
-        new Main().tui.start();
+    // ------------------------------------ velikost terminalu a vychozi vyber pri prechodu ------------------------------------
+
+    private void checkTerminalSize() {
+        sizeWarningLabel.setText("Terminál " + tui.getTerminalWidth() + " × " + tui.getTerminalHeight()
+                + ": potřebujeme alespoň " + WIDTH + " × " + HEIGHT + " znaků.");
+        int visibleLayer = tui.getTerminalWidth() < WIDTH || tui.getTerminalHeight() < HEIGHT ? SIZE_WARNING : layer;
+        // Pri malem okne zmenime pouze zobrazovanou vrstvu; layer si pamatuje skutecne menu.
+        if (tui.getLayer() != visibleLayer) {
+            tui.setLayer(visibleLayer);
+            focusDefault();
+        }
+    }
+
+    private void focusDefault() {
+        if (tui.getLayer() == SIZE_WARNING) return;
+        switch (layer) {
+            case NAMES -> tui.focus(namesFirstInput);
+            case SHOP -> {
+                MiniTui.Button[] rows = shopInventoryOpen ? shopInventoryButtons : shopOfferButtons;
+                tui.focus(rows[0].visible ? rows[0] : shopContinueButton);
+            }
+            case COMBAT -> tui.focus(combatEquipmentButtons[0]);
+            case DETAIL -> tui.focus(detailBuyButton.visible ? detailBuyButton
+                    : detailSellButton.visible ? detailSellButton : detailAddButton);
+            case RESULT -> tui.focus(resultContinueButton);
+            default -> tui.focus(menuBackButton);
+        }
+    }
+
+    private String ownedName(Item item) {
+        return item == null ? "—" : item.getName();
+    }
+
+    private String fit(String value, int width) {
+        return value.length() <= width ? value : value.substring(0, width - 1) + "…";
     }
 }
