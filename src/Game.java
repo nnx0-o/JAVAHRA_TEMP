@@ -222,7 +222,6 @@ public class Game {
             if (effect.getTimer() == 0) actor.removeEffect(effect);
             if (finishIfDefeated()) return;
         }
-        // stary stit uz doslouzil
 
         actor.clearShield(); // na tyhle davky jeste stit plati
     }

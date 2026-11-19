@@ -374,7 +374,6 @@ public class Main {
     private void open(int next) {
         if (next == layer || !isAvailable(next)) return;
 
-        // zpet do menu ne zpet v case
         previousLayers.push(layer);
         layer = next;
         documentPages[next] = 0;

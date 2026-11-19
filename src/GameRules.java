@@ -29,7 +29,6 @@ public final class GameRules {
 
     public static final int PREPARATION_TURNS = 2; // jeden vlastni tah kazdeho hrace
 
-    // tohle nema duvod nekdo vytvaret
 
     private GameRules() {
     }
