@@ -323,7 +323,7 @@ public class Main {
                 "V obchodě lze vybavit jednu zbroj a jeden talisman. Pěst je trvale v inventáři, mimo deset míst pro nákup.",
                 "V boji přidává Enter na výbavě akci do plánu. Enter na akci v plánu ji odebere. I otevře popis výbavy.",
                 "Každý hráč má přípravný tah bez útoků. Potom začínají běžná kola.",
-                "Výdrž se rezervuje při plánování. Opakování stejného kusu stojí více; nový vlastní tah cenu obnoví. Odebrání přepočítá celý plán.",
+                "Výdrž se rezervuje při plánování. Opakování stejného kusu stojí více; nový vlastní tah cenu obnoví.",
                 "Plán se provede shora dolů po potvrzení konce tahu. Smrt jej okamžitě zastaví. Lektvar se spotřebuje až při provedení.",
                 "Výdrž navíc z lektvarů se sčítá a přijde příští vlastní tah. Léčení nepřekročí maximum životů.",
                 "Jedy mají samostatné časovače. Každá dávka je zaokrouhlený podíl zbývající síly a tahů; odečte se od zbývající síly.",
