@@ -200,7 +200,7 @@ Předpony říkají, kam prvek patří: `names`, `shop`, `combat`, `detail`, `re
 
 Textový panel sdílejí detail, návod a podrobnosti hráče. `documentPages[layer]` pamatuje stránku pro každé z těchto menu. `wrapText` připraví řádky, `updateDocument` ukáže jejich výřez. Návod se do řádků převede jednou při startu.
 
-Při malém okně se `MiniTui` přepne na varovnou vrstvu. `Main.layer` si ponechá skutečné menu, takže po zvětšení okna lze pokračovat na stejném místě. Pevný herní prostor je 140 × 38 znaků.
+Kontrola minimální velikosti je dočasně zakomentovaná. `refresh` přepíná `MiniTui` přímo na aktuální `Main.layer`, i když je okno menší než herní prostor 140 × 38 znaků. Obsah mimo okno se ořízne.
 
 ## 5. Nákup: celá cesta mezi soubory
 

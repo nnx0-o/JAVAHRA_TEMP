@@ -55,11 +55,10 @@ public class Main {
         refresh();
         focusDefault();
 
-        tui.onTick(this::checkTerminalSize);
+        // tui.onTick(this::checkTerminalSize);
     }
 
     public static void main(String[] args) {
-        if (MiniTui.openTerminal(Main.class, args)) return;
         new Main().tui.start();
     }
 
@@ -386,7 +385,8 @@ public class Main {
             }
         }
 
-        checkTerminalSize();
+        // checkTerminalSize();
+        if (tui.getLayer() != layer) tui.setLayer(layer);
     }
 
     private void moveElements(List<MiniTui.Element> elements, boolean visible) {
@@ -542,19 +542,19 @@ public class Main {
         documentPageLabel.setText(pages > 1 ? (documentPages[layer] + 1) + "/" + pages : "");
     }
 
-    private void checkTerminalSize() {
-        sizeWarningLabel.setText("Terminál " + tui.getTerminalWidth() + " × " + tui.getTerminalHeight()
-                + ": potřebujeme alespoň " + WIDTH + " × " + HEIGHT + " znaků.");
-        int visibleLayer = tui.getTerminalWidth() < WIDTH || tui.getTerminalHeight() < HEIGHT ? SIZE_WARNING : layer;
-        // varovani meni jen vykreslenou vrstvu po zvetseni se vrati puvodni menu
-        if (tui.getLayer() != visibleLayer) {
-            tui.setLayer(visibleLayer);
-            focusDefault();
-        }
-    }
+    // private void checkTerminalSize() {
+    //     sizeWarningLabel.setText("Terminál " + tui.getTerminalWidth() + " × " + tui.getTerminalHeight()
+    //             + ": potřebujeme alespoň " + WIDTH + " × " + HEIGHT + " znaků.");
+    //     int visibleLayer = tui.getTerminalWidth() < WIDTH || tui.getTerminalHeight() < HEIGHT ? SIZE_WARNING : layer;
+    //     // varovani meni jen vykreslenou vrstvu po zvetseni se vrati puvodni menu
+    //     if (tui.getLayer() != visibleLayer) {
+    //         tui.setLayer(visibleLayer);
+    //         focusDefault();
+    //     }
+    // }
 
     private void focusDefault() {
-        if (tui.getLayer() == SIZE_WARNING) return;
+        // if (tui.getLayer() == SIZE_WARNING) return;
         switch (layer) {
             case NAMES -> tui.focus(namesFirstInput);
             case SHOP -> {
