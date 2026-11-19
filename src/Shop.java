@@ -9,9 +9,11 @@ public class Shop {
 
     // oba nakupuji ze stejne nabidky
 
+    // poradi nabidky zustane stejne i kdyz se zmeni zasoba
     private final Map<Item, Integer> stock = new LinkedHashMap<>();
 
     public Map<Item, Integer> getStock() {
+        // ven davame zivy nahled zmeny zasob jsou videt ale nejdou tudy prepsat
         return Collections.unmodifiableMap(stock);
     }
 
@@ -30,6 +32,7 @@ public class Shop {
                     break;
                 }
             }
+            // vyrazenim typu zabranime dvema radkum se stejnou nabidkou
             available.remove(selected);
             int quantity = selected.getMinStock() + random.nextInt(selected.getMaxStock() - selected.getMinStock() + 1);
             stock.put(selected, quantity);

@@ -93,6 +93,7 @@ public class Player {
         health = MAX_HEALTH;
         stamina = getMaxStamina();
         shield = nextStamina = 0;
+        // reset boje nesaha na inventar vybavu ani gold
         effects.clear();
         actions.clear();
     }
@@ -122,6 +123,7 @@ public class Player {
 
     public boolean replacePlan(List<Item> plan, int previousCost, int nextCost) {
         // kdyz to nevyjde nechame puvodni plan
+        // stamina uz je po rezervaci takze starou cenu nejdriv vratime do rozpoctu
         int budget = stamina + previousCost;
         if (nextCost < 0 || nextCost > budget) return false;
         stamina = budget - nextCost;
@@ -141,6 +143,7 @@ public class Player {
 
     public int cleanse(Damage.DamageType type, int budget) {
         int remaining = Math.max(0, budget);
+        // seznam drzi poradi vzniku takze ocista bere nejstarsi jed prvni
         for (Damage effect : getEffects()) {
             if (effect.getType() != type || remaining == 0) continue;
             remaining -= effect.reduceRemaining(remaining); // tenhle limit je pro vsechny jedy dohromady
@@ -153,6 +156,7 @@ public class Player {
         int reduced = Math.max(0, amount);
         Item armor = inventory.getEquippedArmor();
         if (armor != null && armor.getDamageType() == type) {
+            // kazdy zasah se zaokrouhli zvlast i jednotlive davky jedu
             reduced = (int) Math.round(reduced * (100 - armor.getPower()) / 100.0);
         }
         int blocked = Math.min(shield, reduced);
@@ -160,6 +164,7 @@ public class Player {
         reduced -= blocked;
         int previous = health;
         takeDamage(reduced);
+        // vracime skutecne ztracene hp ne celou silu smrticiho zasahu
         return previous - health;
     }
 

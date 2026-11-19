@@ -52,6 +52,7 @@ public class Game {
     }
 
     public int getCombatStarter() {
+        // kdo jde prvni do shopu jde druhy do boje
         return 1 - shopStarter;
     }
 
@@ -60,6 +61,7 @@ public class Game {
     }
 
     public int getCombatRound() {
+        // pripravne tahy se do cisla kola nepocitaji jedno kolo jsou dva tahy
         return Math.max(0, turn - GameRules.PREPARATION_TURNS) / 2 + 1;
     }
 
@@ -88,6 +90,7 @@ public class Game {
     }
 
     public boolean willStartBattleOnContinue() {
+        // tohle je predpoved pro button jeste pred potvrzenim navstevy
         return phase == Phase.SHOP && !traded && unchangedVisits == 1;
     }
 
@@ -175,6 +178,7 @@ public class Game {
                 actor.receiveDamage(amount, effect.getType());
             }
             if (effect.getTimer() == 0) actor.removeEffect(effect);
+            // smrt ukonci souboj hned dalsi efekt uz hrace nezachrani
             if (finishIfDefeated()) return;
         }
 
@@ -187,6 +191,7 @@ public class Game {
         // stamina uz je odectena ted jen provedeme akce
         for (Item item : actor.getActions()) {
             resolveAction(item);
+            // po smrtici akci se zbytek planu uz neprovede
             if (finishIfDefeated()) return;
         }
         turn++;
@@ -201,6 +206,7 @@ public class Game {
         if (!actor.getInventory().contains(item)) return "Tento předmět nemáš v inventáři.";
         if (item.getItemType() == ItemType.DAMAGE && isPreparation()) return "Přípravný tah: zatím nelze zasáhnout soupeře.";
         if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
+        // stejny lektvar nemuze byt v planu dvakrat zbran ano
         if (item.isConsumable() && actor.getActions().contains(item)) return "Tento kus je již v plánu.";
 
         List<Item> next = new ArrayList<>(actor.getActions());
@@ -248,6 +254,7 @@ public class Game {
         List<Item> next = new ArrayList<>(getCurrentPlayer().getActions());
         if (index < 0 || index >= next.size()) return false;
         next.remove(index);
+        // prepocitame i pozdejsi opakovani po odebrani muzou byt levnejsi
         return replacePlan(next);
     }
 
@@ -278,6 +285,7 @@ public class Game {
             }
             default -> throw new IllegalStateException("Neznámá aktivní akce.");
         }
+        // lektvar zmizi az po pouziti odebrani z planu ho nespotrebuje
         if (item.isConsumable()) actor.removeFromInventory(item);
     }
 

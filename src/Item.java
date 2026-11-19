@@ -59,6 +59,7 @@ public class Item {
     }
 
     public int getRepeatCostIncrease() {
+        // i levny item pri opakovani zdrazi aspon o jednu staminu
         return Math.max(1, (int) Math.round(staminaCost / 2.0));
     }
 
@@ -67,6 +68,7 @@ public class Item {
     } // u efektu na vic tahu je to jedna davka
 
     public boolean hasTimedEffect() {
+        // fyzicky utok je hned jed je casovany i kdyz ma jen jeden tah
         return itemType == ItemType.DAMAGE && damageType != Damage.DamageType.PHYSICAL
                 || itemType == ItemType.HEAL && duration > 1;
     }

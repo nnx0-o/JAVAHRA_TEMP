@@ -741,6 +741,7 @@ public class MiniTui {
                 }
             } else if (key.equals("BACKSPACE")) {
                 if (!input.value.isEmpty()) {
+                    // jeden znak muze mit dva java chary backspace ho musi vzit cely
                     input.value = input.value.substring(0, input.value.offsetByCodePoints(input.value.length(), -1));
                     if (input.onChange != null) input.onChange.accept(input.value);
                 }
@@ -752,6 +753,7 @@ public class MiniTui {
             return;
         }
 
+        // registrovany hotkey ma prednost pred defaultem minitui
         Runnable shortcut = keyCallbacks.get(key);
         if (shortcut != null) {
             shortcut.run();

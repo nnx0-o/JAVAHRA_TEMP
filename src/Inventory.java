@@ -31,6 +31,7 @@ public class Inventory {
 
     public boolean remove(Item item) {
         if (item == ItemCatalog.FIST || !items.remove(item)) return false;
+        // prodany item nesmi zustat aktivni ve slotu
         if (item == equippedArmor) equippedArmor = null;
         if (item == equippedTrinket) equippedTrinket = null;
         return true;

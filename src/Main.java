@@ -307,6 +307,7 @@ public class Main {
     }
 
     private void back() {
+        // vracime jen menu nakup ani naplanovane akce tim nevratime
         if (previousLayers.isEmpty()) return;
         layer = previousLayers.pop();
         refresh();
@@ -359,6 +360,7 @@ public class Main {
     }
 
     private void refresh() {
+        // refresh jen cte herni stav nesmi posunout tah ani losovat novy shop
 
         tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1/H: návod  R: obnovit  Esc: zpět");
         tui.setTheme(game == null ? WHITE : game.getCurrentIndex() == 0 ? ORANGE : MINT);
@@ -437,6 +439,7 @@ public class Main {
             String quantity = offers ? game.getShop().getStock().get(item) + " ks"
                     : (game.getCurrentPlayer().getEquipment().isEquipped(item) ? "*" : "");
             button.setText(formatShopRow(item.getName(), text.summary(item), price + " zl.", quantity));
+            // stejny button muze po refreshi patrit jinemu kusu tak menime i callback
             button.action = () -> inspect(item, offers);
         }
     }
@@ -462,6 +465,7 @@ public class Main {
 
         List<Item> plan = player.getActions();
         int pages = Math.max(1, (plan.size() + PLAN_ROWS - 1) / PLAN_ROWS);
+        // po smazani posledni akce na strance uz ta stranka nemusi existovat
         combatPlanPage = Math.max(0, Math.min(combatPlanPage, pages - 1));
         for (int row = 0; row < combatPlanButtons.length; row++) {
             int index = combatPlanPage * PLAN_ROWS + row;
@@ -476,6 +480,7 @@ public class Main {
 
     private void updateDetail() {
         boolean shopping = game.getPhase() == Game.Phase.SHOP;
+        // nabidka a vlastni kus muzou mit stejny nazev rozhoduje odkud jsme detail otevreli
         detailBuyButton.visible = shopping && detailIsOffer;
         detailSellButton.visible = shopping && !detailIsOffer;
         detailEquipButton.visible = detailSellButton.visible && detailItem.isEquipment();
@@ -522,6 +527,7 @@ public class Main {
     private void updateDocument(String title, List<String> lines) {
         documentPanel.title = title;
         int pages = Math.max(1, (lines.size() + TEXT_ROWS - 1) / TEXT_ROWS);
+        // obsah se muze zkratit i kdyz jsme predtim byli na posledni strance
         documentPages[layer] = Math.max(0, Math.min(documentPages[layer], pages - 1));
         for (int row = 0; row < TEXT_ROWS; row++) {
             int index = documentPages[layer] * TEXT_ROWS + row;

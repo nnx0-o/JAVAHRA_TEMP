@@ -30,6 +30,8 @@ public class Damage {
     }
 
     public int takeTick() {
+        // davku pocitame ze zbytku takze ocista zmensi i dalsi tiky
+        // posledni tah vezme cely zbytek i kdyz se predtim zaokrouhlovalo
         int result = timer == 0 ? 0 : (int) Math.round((double) amount / timer);
         if (timer > 0) {
             amount -= result;
