@@ -1,4 +1,3 @@
-// popisy skladame z toho co item opravdu dela
 public final class GameText {
 
     public String damageType(Damage.DamageType type) {
@@ -50,8 +49,6 @@ public final class GameText {
                 ? "\nPoužití: trvalá výbava, nelze prodat. Nezabírá místo pro nákup."
                 : "\nPoužití: opakovaně, zůstává v inventáři.");
     }
-
-    // ukazeme co zbyva dalsi davky tu nepocitame
 
     public String effect(Damage effect) {
         return damageType(effect.getType()) + ": " + effect.getAmount()

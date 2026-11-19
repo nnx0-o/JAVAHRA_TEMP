@@ -154,14 +154,14 @@ public class Game {
 
         Player actor = getCurrentPlayer();
         actor.beginTurn();
-        // talisman jde prvni
+        // talisman se vyhodnoti pred efekty takze ocista muze oslabit uz dnesni jed
 
         Item trinket = actor.getEquipment().getEquippedTrinket();
         if (trinket != null) {
             switch (trinket.getPassive()) {
                 case REGENERATION -> actor.heal(trinket.getPower());
                 case LOW_HEALTH_HEAL -> {
-                    // presne polovina jeste nestaci heal plati az pod ni
+                    // tenhle heal se spusti jen pod polovinou hp ne presne na ni
                     if (actor.getHealth() * 2 < Player.MAX_HEALTH) actor.heal(trinket.getPower());
                 }
                 case STAMINA_BONUS -> actor.addStamina(trinket.getPower());
@@ -169,9 +169,8 @@ public class Game {
                 default -> { }
             }
         }
-        // pak efekty jak prisly
 
-        // jedeme pres kopii at muzeme hotove efekty rovnou mazat
+        // efekty bereme v poradi vzniku pres kopii at muzeme hotove rovnou mazat
         for (Damage effect : actor.getEffects()) {
             int amount = effect.takeTick();
             if (effect.getType() == Damage.DamageType.HEAL) {
@@ -180,11 +179,11 @@ public class Game {
                 actor.receiveDamage(amount, effect.getType());
             }
             if (effect.getTimer() == 0) actor.removeEffect(effect);
-            // smrt ukonci souboj hned dalsi efekt uz hrace nezachrani
+            // smrt se kontroluje po kazdem efektu pozdejsi heal uz nepomuze
             if (finishIfDefeated()) return;
         }
 
-        actor.clearShield(); // na tyhle davky jeste stit plati
+        actor.clearShield(); // stary stit smazeme az po uvodnich efektech
     }
 
     public void endTurn() {
@@ -206,10 +205,10 @@ public class Game {
         if (item == null) return "Vyber předmět.";
         Player actor = getCurrentPlayer();
         if (!actor.getInventory().contains(item)) return "Tento předmět nemáš v inventáři.";
-        // priprava blokuje i jed protoze je to porad utok na soupere
+        // v priprave nejde ani jed ostatni podpora zustava dostupna
         if (item.getItemType() == ItemType.DAMAGE && isPreparation()) return "Přípravný tah: zatím nelze zasáhnout soupeře.";
         if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
-        // stejny lektvar nemuze byt v planu dvakrat zbran ano
+        // jeden kus lektvaru jde naplanovat jen jednou zbran opakovane
         if (item.isConsumable() && actor.getActions().contains(item)) return "Tento kus je již v plánu.";
 
         List<Item> next = new ArrayList<>(actor.getActions());
@@ -220,14 +219,14 @@ public class Game {
     }
 
     public int getActionCost(Item item) {
-        // dalsi pouziti pocita vsechno co uz v planu je
+        // cena dalsi akce zahrnuje vsechna pouziti stejneho kusu v planu
         return actionCost(item, getCurrentPlayer().getActions());
     }
 
     public int getPlannedActionCost(int index) {
         List<Item> plan = getCurrentPlayer().getActions();
         if (index < 0 || index >= plan.size()) return 0;
-        // tady pocitame jen to co je pred touhle akci
+        // cenu ulozene akce ovlivnuji jen drivejsi pouziti stejneho kusu
         return actionCost(plan.get(index), plan.subList(0, index));
     }
 
@@ -248,7 +247,6 @@ public class Game {
 
     private boolean replacePlan(List<Item> next) {
         Player actor = getCurrentPlayer();
-        // stary plan vratime novy zaplatime zatim se nic neprovadi
         return actor.replacePlan(next, planCost(actor.getActions()), planCost(next));
     }
 
@@ -278,7 +276,7 @@ public class Game {
                 if (item.getDuration() == 1) {
                     actor.heal(item.getPower());
                 } else {
-                    // uz probehl zacatek tahu takze prvni davka prijde az v dalsim vlastnim
+                    // heal pridavame po zacatku tahu prvni davka prijde az priste
                     actor.addEffect(new Damage(Damage.DamageType.HEAL, item.getTotalPower(), item.getDuration()));
                 }
             }

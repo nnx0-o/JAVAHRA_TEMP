@@ -47,7 +47,7 @@ public class Player {
         return health > 0;
     }
 
-    // seznam ven davame jako kopii efekty jsou porad ty same
+    // kopie chrani seznam efekty uvnitr zustavaji sdilene
     public List<Damage> getEffects() {
         return List.copyOf(effects);
     }
@@ -57,7 +57,7 @@ public class Player {
     }
 
     public Inventory getEquipment() {
-        // je to cely inventar i s tim co ma na sobe
+        // vraci spravce inventare vcetne vybavenych slotu
         return inventory;
     }
 
@@ -102,7 +102,7 @@ public class Player {
         stamina = getMaxStamina() + nextStamina; // bonus muze jit nad normalni maximum
         nextStamina = 0;
         actions.clear();
-        // stit jeste nechame na uvodni efekty
+        // stit zustava do vyhodnoceni uvodnich efektu
     }
 
     public void clearShield() {
@@ -122,19 +122,18 @@ public class Player {
     }
 
     public boolean replacePlan(List<Item> plan, int previousCost, int nextCost) {
-        // kdyz to nevyjde nechame puvodni plan
-        // stamina uz je po rezervaci takze starou cenu nejdriv vratime do rozpoctu
+        // neplatna zmena nesmi prepsat puvodni plan ani staminu
+        // volna stamina uz nezahrnuje stary plan jeho cenu vratime pred novym odectem
         int budget = stamina + previousCost;
         if (nextCost < 0 || nextCost > budget) return false;
         stamina = budget - nextCost;
         actions.clear();
         actions.addAll(plan);
-        // co se pouzilo uz vime z planu
         return true;
     }
 
     public void addEffect(Damage effect) {
-        effects.add(effect); // kazdy efekt si odpocitava svoje tahy
+        effects.add(effect);
     }
 
     public void removeEffect(Damage effect) {
@@ -146,7 +145,7 @@ public class Player {
         // seznam drzi poradi vzniku takze ocista bere nejstarsi jed prvni
         for (Damage effect : getEffects()) {
             if (effect.getType() != type || remaining == 0) continue;
-            remaining -= effect.reduceRemaining(remaining); // tenhle limit je pro vsechny jedy dohromady
+            remaining -= effect.reduceRemaining(remaining); // limit ocisty je spolecny pro vsechny jedy
             if (effect.getAmount() == 0) effects.remove(effect);
         }
         return Math.max(0, budget) - remaining;

@@ -90,7 +90,6 @@ public final class ItemCatalog {
         return List.copyOf(items);
     }
 
-    // text k tomu slozi gametext tady staci hodnoty
     private static void weapon(List<Item> items, String name, int price, int cost, int power,
             int duration, Damage.DamageType type, Item.Rarity rarity, int min, int max) {
         items.add(new Item(ItemType.DAMAGE, name, price, cost, power, duration, type,

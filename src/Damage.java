@@ -5,7 +5,7 @@ public class Damage {
     }
 
     private final DamageType type;
-    private int amount; // tohle je cely zbytek ne jedna davka
+    private int amount; // celkova zbyvajici sila efektu ne sila jedne davky
     private int timer;
 
     public Damage(DamageType type, int amount, int timer) {
@@ -30,8 +30,8 @@ public class Damage {
     }
 
     public int takeTick() {
-        // davku pocitame ze zbytku takze ocista zmensi i dalsi tiky
-        // posledni tah vezme cely zbytek i kdyz se predtim zaokrouhlovalo
+        // davka vychazi ze zbytku takze ocista oslabi i dalsi tick
+        // posledni tick vezme zbytek aby se zaokrouhlenim neztratila cast efektu
         int result = timer == 0 ? 0 : (int) Math.round((double) amount / timer);
         if (timer > 0) {
             amount -= result;
@@ -42,7 +42,7 @@ public class Damage {
 
     public int reduceRemaining(int maximum) {
         int removed = Math.min(amount, Math.max(0, maximum));
-        amount -= removed; // ubereme jen co ocista zvladne delka zustava
+        amount -= removed; // ocista ubira silu pocet zbyvajicich tahu nemeni
         return removed;
     }
 

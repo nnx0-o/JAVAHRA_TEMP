@@ -6,8 +6,6 @@ import java.util.Random;
 
 public class Main {
 
-    // pravidla jsou v game a player tady jen ui
-
     private static final int NAMES = 0, SHOP = 1, COMBAT = 2, DETAIL = 3;
     private static final int HELP = 4, PLAYER = 5, RESULT = 6, SIZE_WARNING = 7;
     private static final int WIDTH = 140, HEIGHT = 38, TEXT_ROWS = 18, PLAN_ROWS = 16;
@@ -18,7 +16,7 @@ public class Main {
     private final MiniTui tui = new MiniTui();
     private final GameText text = new GameText();
     private final Deque<Integer> previousLayers = new ArrayDeque<>();
-    private Game game; // hru vytvorime az po zadani jmen
+    private Game game;
     private int layer = NAMES;
     private String message = "";
     private boolean shopInventoryOpen, detailIsOffer;
@@ -149,7 +147,7 @@ public class Main {
             refresh();
         });
 
-        // pred textem buttonu jsou tri znaky takze header posuneme taky
+        // header musi pocitat se tremi znaky ukazatele pred textem buttonu
         shopColumnsLabel = label(SHOP, 7, 14, "", MUTED);
 
         for (int row = 0; row < shopOfferButtons.length; row++) {
@@ -173,7 +171,7 @@ public class Main {
         box(COMBAT, 52, 12, 49, 22, "Plán — provede se shora dolů");
 
         for (int row = 0; row < combatEquipmentButtons.length; row++) {
-            // item se muze zmenit tak ho bereme az pri potvrzeni
+            // callback si drzi radek aktualni item zjisti az pri potvrzeni
             final int index = row;
             combatEquipmentButtons[row] = button(COMBAT, 4, 14 + row, "", () -> {
                 message = game.act(combatEquipmentItems[index]);
@@ -191,7 +189,6 @@ public class Main {
             });
         }
 
-        // tohle je jen velikost stranky akci muze byt vic
         label(COMBAT, 54, 31, "Enter: odebrat akci", MUTED);
         combatPlanPreviousButton = button(COMBAT, 54, 32, "←", () -> {
             combatPlanPage--;
@@ -281,12 +278,12 @@ public class Main {
             }
         });
 
-        // screeny si prepiname sami pres kontrolu dostupnosti
+        // prazdne callbacky vypnou defaultni prepinani ktere obchazi kontrolu dostupnosti
         for (String key : new String[]{"[", "]", "PGUP", "PGDN"}) tui.onKey(key, () -> { });
     }
 
     private boolean isAvailable(int next) {
-        // navod jde otevrit i pred vytvorenim hry ostatni herni screeny ne
+        // navod je dostupny i bez hry ostatni herni screeny vyzaduji game
         if (next == HELP) return true;
         if (next == NAMES) return game == null;
         if (game == null) return false;
@@ -303,7 +300,6 @@ public class Main {
     private void open(int next) {
         if (next == layer || !isAvailable(next)) return;
 
-        // ve stacku jsou jen navraty do menu herni stav si nekopirujeme
         previousLayers.push(layer);
         layer = next;
         documentPages[next] = 0;
@@ -320,7 +316,7 @@ public class Main {
     }
 
     private void showRoot(int next) {
-        // novy tah takze stare navraty zahodime
+        // po zmene hrace nebo faze se nesmi vracet do predchoziho herniho menu
         previousLayers.clear();
         layer = next;
         refresh();
@@ -550,7 +546,7 @@ public class Main {
         sizeWarningLabel.setText("Terminál " + tui.getTerminalWidth() + " × " + tui.getTerminalHeight()
                 + ": potřebujeme alespoň " + WIDTH + " × " + HEIGHT + " znaků.");
         int visibleLayer = tui.getTerminalWidth() < WIDTH || tui.getTerminalHeight() < HEIGHT ? SIZE_WARNING : layer;
-        // jen ukazeme varovani puvodni screen si nechame
+        // varovani meni jen vykreslenou vrstvu po zvetseni se vrati puvodni menu
         if (tui.getLayer() != visibleLayer) {
             tui.setLayer(visibleLayer);
             focusDefault();

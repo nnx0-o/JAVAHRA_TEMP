@@ -81,7 +81,7 @@ public class Item {
 
     public int getPower() {
         return power;
-    } // u efektu na vic tahu je to jedna davka
+    } // u casovaneho efektu je to sila jedne davky
 
     public boolean hasTimedEffect() {
         // fyzicky utok je hned jed je casovany i kdyz ma jen jeden tah
@@ -89,7 +89,7 @@ public class Item {
                 || itemType == ItemType.HEAL && duration > 1;
     }
 
-    // tick i ocista ubiraji ze stejneho zbytku
+    // casovany efekt dostane celkovou silu davky se z ni teprve odecitaji
     public int getTotalPower() {
         return hasTimedEffect() ? Math.multiplyExact(power, duration) : power;
     }
@@ -127,7 +127,6 @@ public class Item {
     }
 
     public Item copy() {
-        // stejna nabidka ale kazdy nakup je vlastni kus
         return new Item(itemType, name, price, staminaCost, power, duration, damageType,
                 rarity, minStock, maxStock, passive);
     }

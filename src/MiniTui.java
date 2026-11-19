@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 public class MiniTui {
 
     public static boolean openTerminal(Class<?> mainClass, String[] args) {
-        // child uz vlastni okno ma jinak by se terminaly oteviraly porad dokola
+        // child ma vlastni terminal dalsi okno uz otevirat nesmi
         if (Boolean.getBoolean("minitui.inTerminal") || Boolean.getBoolean("minitui.currentTerminal")) return false;
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         boolean windows = os.startsWith("windows");
@@ -20,7 +20,7 @@ public class MiniTui {
         for (String entry : System.getProperty("java.class.path").split(File.pathSeparator, -1)) {
             classPath.add(new File(entry.isEmpty() ? "." : entry).getAbsolutePath());
         }
-        // debugger port z ide nepredavame druhy proces by se na nej nepripojil
+        // vm argumenty z ide nepredavame debugger port uz pouziva puvodni proces
         List<String> child = new ArrayList<>(List.of(java, "-Dminitui.inTerminal=true", "-cp", classPath.toString(), mainClass.getName()));
         child.addAll(Arrays.asList(args));
         List<List<String>> commands = new ArrayList<>();
@@ -172,7 +172,7 @@ public class MiniTui {
 
     // x a y od nuly z je screen
     public static abstract class Element {
-        // cely update tim atomicky neni akce porad patri do hlavniho loopu
+        // volatile zviditelni jednotliva pole cely update ale atomicky neni
         public volatile int x, y, z;
         public volatile boolean focusable;
         public volatile boolean visible = true;
@@ -204,7 +204,6 @@ public class MiniTui {
             return visible;
         }
 
-        // u inputu hodnota u ramecku nadpis
         public String getText() {
             return "";
         }
@@ -384,8 +383,8 @@ public class MiniTui {
             return onSubmit;
         }
 
-        // kdyz to nastavime primo callback nevolame
-        // zmena hned submit az enterem
+        // prime nastaveni hodnoty nevola callback
+        // klavesnice vola callback po uprave submit az po enteru
         public void setValue(String val) {
             this.value = val;
         }
@@ -403,7 +402,7 @@ public class MiniTui {
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
             // sirka je jen na zobrazeni text muze byt delsi
-            // u dlouheho textu ukazeme konec zbytek orizne render
+            // dlouhy input ukazuje konec textu dekorace orizne render
             int fieldWidth = Math.max(1, Math.min(width, termWidth - x - label.length() - 7));
             String displayVal = value.length() > fieldWidth
                     ? value.substring(value.length() - fieldWidth)
@@ -526,8 +525,8 @@ public class MiniTui {
         return result.toString();
     }
 
-    // pri zmene vznikne kopie loop muze jet dal
-    // cteme casto pridavame malo
+    // kopie pole pri zapisu dovoli dokoncit rozecteny pruchod
+    // kopirovani pri zapisu vyhovuje protoze prvky vetsinou jen cteme
     private final List<Element> elements = new CopyOnWriteArrayList<>();
 
     private final BlockingQueue<String> keyQueue = new LinkedBlockingQueue<>();
@@ -540,12 +539,12 @@ public class MiniTui {
     private volatile boolean running = false;
     private volatile int currentZ = 0;
 
-    // i rychle zmenseni a zvetseni musi vyvolat refresh
+    // novy snapshot vynuti refresh i po navratu ke stejnym rozmerum
     private record TerminalGeometry(int width, int height, int left, int top) {}
     private volatile TerminalGeometry terminal = new TerminalGeometry(80, 24, 0, 0);
     private volatile String statusText = "Šipky: výběr | Enter: potvrdit | [ / ]: obrazovka | Ctrl+C: konec";
 
-    // cache si resi jen hlavni loop
+    // render cache pouziva jen hlavni loop
     private String lastFrame = "";
     private TerminalGeometry lastRenderedGeometry;
     private volatile Process windowsProcess;
@@ -606,7 +605,7 @@ public class MiniTui {
         return statusText;
     }
 
-    // kopie seznamu prvky uvnitr jsou porad stejne
+    // kopie chrani seznam samotne prvky zustavaji sdilene
     public List<Element> getElements() {
         return List.copyOf(elements);
     }
@@ -631,8 +630,6 @@ public class MiniTui {
         return terminal.height();
     }
 
-    // novy screen ukonci psani a dostane novy focus
-    // i kdyz nastavime stejny screen
     public void setLayer(int z) {
         this.currentZ = z;
         this.editing = false;
@@ -648,8 +645,6 @@ public class MiniTui {
         this.running = false;
     }
 
-    // input a rozmery hlidame i kdyz loop zrovna nic nedela
-    // callbacky zustavaji v hlavnim loopu
     public void start() {
         if (running) throw new IllegalStateException("MiniTui už běží");
         running = true;
@@ -728,7 +723,7 @@ public class MiniTui {
             try {
                 Runtime.getRuntime().removeShutdownHook(shutdownHook);
             } catch (IllegalStateException shuttingDown) {
-                // ukonceni uz bezi uklid se udela jen jednou
+                // shutdown hook uz bezi oba zpusoby ukonceni sdili jeden uklid
             }
             if (interrupted) Thread.currentThread().interrupt();
         }
@@ -770,7 +765,7 @@ public class MiniTui {
 
     private void handleKey(String key) {
         // rozmer muze prijit i jako pozice kurzoru v rohu
-        // tohle odpovida terminal neni to psany text
+        // odpoved na rozmery spotrebujeme tady nesmi se zapsat do inputu
         if (key.startsWith("\033[8;") && key.endsWith("t")
                 || key.startsWith("\033[") && key.endsWith("R")) {
             try {
@@ -801,7 +796,7 @@ public class MiniTui {
         if (editing && focusedElement instanceof Input input) {
             if (key.equals("ENTER") || key.equals("ESC")) {
                 editing = false;
-                // escape prestane psat rozepsany text necha
+                // escape ukonci editaci bez submitu rozepsanou hodnotu ponecha
                 if (key.equals("ENTER") && input.onSubmit != null) {
                     input.onSubmit.accept(input.value);
                 }
@@ -1068,7 +1063,6 @@ public class MiniTui {
         }
     }
 
-    // zbytek sekvence muze prijit az priste
     private static final class UnixKeyDecoder {
         private final Consumer<String> keys;
         private final StringBuilder escape = new StringBuilder();
@@ -1140,7 +1134,7 @@ public class MiniTui {
 
         void expire(long now) {
             if (!escape.isEmpty() && now >= deadline) {
-                // samotny escape potvrdime rozectenou sekvenci pri timeoutu zahodime
+                // po timeoutu prijmeme samotny escape neuplnou sekvenci zahodime
                 if (escape.length() == 1) keys.accept("ESC");
                 escape.setLength(0);
             }
@@ -1188,7 +1182,7 @@ public class MiniTui {
         }
     }
 
-    // powershell vystup je pipe rozmery musime vzit z konzole
+    // vystup powershellu je pipe proto rozmery cteme pres console api
     private static final String WINDOWS_CONSOLE_API = """
             $ErrorActionPreference = 'Stop'
             Add-Type -TypeDefinition @'

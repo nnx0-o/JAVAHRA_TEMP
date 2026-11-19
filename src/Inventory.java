@@ -24,7 +24,7 @@ public class Inventory {
     }
 
     public boolean add(Item item) {
-        // item nema vlastni equals takze kontrolujeme stejny kus ne stejny typ
+        // bez vlastniho equals se hlida identita kusu dva stejne typy nevadi
         if (item == null || items.contains(item) || items.size() >= getCapacity()) return false;
         items.add(item);
         return true;
@@ -32,7 +32,7 @@ public class Inventory {
 
     public boolean remove(Item item) {
         if (item == ItemCatalog.FIST || !items.remove(item)) return false;
-        // prodany item nesmi zustat aktivni ve slotu
+        // odebrani vybaveneho kusu musi uvolnit i jeho slot
         if (item == equippedArmor) equippedArmor = null;
         if (item == equippedTrinket) equippedTrinket = null;
         return true;
@@ -40,7 +40,7 @@ public class Inventory {
 
     public boolean equipArmor(Item item) {
         if (item != null && (item.getItemType() != ItemType.ARMOR || !items.contains(item))) return false;
-        equippedArmor = item; // null jen sunda item v inventari zustane
+        equippedArmor = item; // null uvolni slot item zustane v inventari
         return true;
     }
 

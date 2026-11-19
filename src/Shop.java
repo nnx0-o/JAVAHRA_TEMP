@@ -13,7 +13,7 @@ public class Shop {
     private final Map<Item, Integer> stock = new LinkedHashMap<>();
 
     public Map<Item, Integer> getStock() {
-        // ven davame zivy nahled zmeny zasob jsou videt ale nejdou tudy prepsat
+        // je to zivy nahled zmeny zasob uvidi i drivejsi volajici ale mapu neprepisou
         return Collections.unmodifiableMap(stock);
     }
 
@@ -23,7 +23,7 @@ public class Shop {
         for (int count = 0; count < GameRules.SHOP_SIZE && !available.isEmpty(); count++) {
             int totalWeight = 0;
             for (Item item : available) totalWeight += selectionWeight(item);
-            int ticket = random.nextInt(totalWeight); // kazdy typ jen jednou
+            int ticket = random.nextInt(totalWeight);
             Item selected = available.get(0);
             for (Item item : available) {
                 ticket -= selectionWeight(item);
@@ -32,7 +32,7 @@ public class Shop {
                     break;
                 }
             }
-            // vyrazenim typu zabranime dvema radkum se stejnou nabidkou
+            // typ vybirame bez opakovani pocet kusu se losuje zvlast
             available.remove(selected);
             int quantity = selected.getMinStock() + random.nextInt(selected.getMaxStock() - selected.getMinStock() + 1);
             stock.put(selected, quantity);
@@ -40,7 +40,7 @@ public class Shop {
     }
 
     private int selectionWeight(Item item) {
-        // porad random jen levne zbrane padaji casteji
+        // levne zbrane maji trojnasobnou vahu pri vyberu
         int multiplier = item.getItemType() == ItemType.DAMAGE && item.getPrice() <= 7 ? 3 : 1;
         return item.getRarity().getWeight() * multiplier;
     }
@@ -49,7 +49,7 @@ public class Shop {
         if (item == null || stock.getOrDefault(item, 0) < 1) return false;
         int price = item.getPrice();
         if (player.getGold() < price) return false;
-        if (!player.addToInventory(item.copy())) return false; // nejdriv misto pak penize
+        if (!player.addToInventory(item.copy())) return false;
         stock.put(item, stock.get(item) - 1);
         player.changeGold(-price);
         return true;
@@ -57,7 +57,6 @@ public class Shop {
 
     public boolean sell(Player player, Item item) {
         if (item == null || !player.getEquipment().remove(item)) return false;
-        // prodej bere cenu konkretniho kusu ne aktualni nabidku shopu
         player.changeGold(item.getPrice() / 2);
         return true; // do nabidky uz to nevracime
     }
