@@ -1,6 +1,6 @@
 public class Item {
 
-    // ------------------------------------ druhy pasivnich ucinku ------------------------------------
+    // druhy pasivnich efektu
 
     public enum Passive {
         NONE,
@@ -11,7 +11,7 @@ public class Item {
         CLEANSE_POISON
     }
 
-    // ------------------------------------ nemenne vlastnosti jednoho predmetu ------------------------------------
+    // nemenne vlastnosti jednoho itemu
 
     private final ItemType itemType;
     private final String name;
@@ -25,7 +25,7 @@ public class Item {
     private final int maxStock;
     private final Passive passive;
 
-    // ------------------------------------ vytvoreni predmetu a kontrola hodnot ------------------------------------
+    // vytvoreni itemu a kontrola hodnot
 
     public Item(ItemType itemType, String name, int price, int staminaCost, int power,
             int duration, Damage.DamageType damageType, Rarity rarity, int minStock,
@@ -48,7 +48,7 @@ public class Item {
         this.passive = passive;
     }
 
-    // ------------------------------------ cteni typu, jmena, ceny a sily ------------------------------------
+    // cteni typu jmena ceny a sily
 
     public ItemType getItemType() {
         return itemType;
@@ -72,21 +72,21 @@ public class Item {
 
     public int getPower() {
         return power;
-    } // u casovaneho ucinku jde o silu jedne davky
+    } // u efektu s timerem jde o silu jedne davky
 
-    // ------------------------------------ rozpoznani casovaneho ucinku a jeho celkova sila ------------------------------------
+    // rozpoznani efektu s timerem a jeho celkova sila
 
     public boolean hasTimedEffect() {
         return itemType == ItemType.DAMAGE && damageType != Damage.DamageType.PHYSICAL
                 || itemType == ItemType.HEAL && duration > 1;
     }
 
-    // Model ucinku uchovava celkovy zbytek, ze ktereho postupne odebira davky a ocistu.
+    // efekt drzi zbyvajici silu tick a cleanse ji postupne ubiraji
     public int getTotalPower() {
         return hasTimedEffect() ? Math.multiplyExact(power, duration) : power;
     }
 
-    // ------------------------------------ cteni trvani, rarity, zasoby a pasivnich vlastnosti ------------------------------------
+    // cteni trvani rarity zasoby a pasivnich vlastnosti
 
     public int getDuration() {
         return duration;
@@ -112,7 +112,7 @@ public class Item {
         return passive;
     }
 
-    // ------------------------------------ rozliseni spotrebnich predmetu a vybaveni ------------------------------------
+    // rozliseni spotrebnich itemu a vybaveni
 
     public boolean isConsumable() {
         return itemType == ItemType.HEAL || itemType == ItemType.STAMINA;
@@ -122,7 +122,7 @@ public class Item {
         return itemType == ItemType.ARMOR || itemType == ItemType.TRINKET;
     }
 
-    // ------------------------------------ kopie pro samostatny fyzicky kus ------------------------------------
+    // kopie pro samostatny fyzicky kus
 
     public Item copy() {
         // kazdy koupeny kus ma vlastni identitu i kdyz pochazi ze stejne nabidky

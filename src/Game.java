@@ -4,16 +4,16 @@ import java.util.Random;
 
 public class Game {
 
-    // Game ridi poradi a pravidla zapasu. Nema tlacitka ani souradnice terminalu.
-    // Main vola verejne akce; Game meni Player, Inventory a Shop a vraci textovy vysledek.
+    // game resi poradi a pravidla zapasu bez ui
+    // main vola akce game updatuje hrace inventar a shop a vraci zpravu
 
-    // ------------------------------------ faze zapasu ------------------------------------
+    // faze zapasu
 
     public enum Phase {
         ANNOUNCEMENT, SHOP, COMBAT, RESULT, FINISHED
     }
 
-    // ------------------------------------ hraci, obchod, historie a stav zapasu ------------------------------------
+    // hraci obchod historie a stav zapasu
 
     private final Player[] players;
     private final int[] wins = new int[2];
@@ -23,14 +23,14 @@ public class Game {
     private final GameText text = new GameText();
     private Phase phase = Phase.ANNOUNCEMENT;
     private int shopStarter;
-    private int current; // index aktivniho hrace: 0 nebo 1
+    private int current; // index aktivniho hrace 0 nebo 1
     private int battle = 1;
-    private int turn; // pocet dokoncenych tahu obou hracu, vcetne pripravy
-    private int unchangedVisits; // pocet navstev za sebou bez nakupu nebo prodeje
-    private boolean traded; // uspesny nakup nebo prodej behem prave probihajici navstevy
-    private int winner = -1; // -1 znamena, ze zatim nikdo nevyhral souboj
+    private int turn; // hotove tahy obou hracu vcetne pripravy
+    private int unchangedVisits; // navstevy shopu za sebou bez nakupu nebo prodeje
+    private boolean traded; // jestli behem tehle navstevy probehl trade
+    private int winner = -1; // minus jedna znamena ze souboj jeste nema viteze
 
-    // ------------------------------------ vytvoreni zapasu a losovani poradi ------------------------------------
+    // vytvoreni zapasu a losovani poradi
 
     public Game(String firstName, String secondName, Random random) {
         this.random = random;
@@ -41,7 +41,7 @@ public class Game {
         current = shopStarter;
     }
 
-    // ------------------------------------ cteni hracu, poradi, faze a vysledku ------------------------------------
+    // cteni hracu poradi faze a vysledku
 
     public Player getPlayer(int index) {
         return players[index];
@@ -107,13 +107,13 @@ public class Game {
         return phase == Phase.SHOP && !traded && unchangedVisits == 1;
     }
 
-    // ------------------------------------ zapis do historie ------------------------------------
+    // zapis do historie
 
     private void report(String message) {
         log.add(message);
     }
 
-    // ------------------------------------ otevreni obchodu, nakup, prodej a vybaveni ------------------------------------
+    // otevreni obchodu nakup prodej a vybaveni
 
     public void openShop() {
         if (phase != Phase.ANNOUNCEMENT) return;
@@ -148,7 +148,7 @@ public class Game {
     public String equip(Item item) {
         if (phase != Phase.SHOP || item == null) return "Vybavení lze měnit pouze v obchodě.";
         Inventory inventory = getCurrentPlayer().getEquipment();
-        // Opetovne potvrzeni vybaveneho predmetu ho sunda; null znamena prazdny slot.
+        // druhy klik vybaveny item sunda null je prazdny slot
         Item next = inventory.isEquipped(item) ? null : item;
         boolean success = item.getItemType() == ItemType.ARMOR ? inventory.equipArmor(next)
                 : item.getItemType() == ItemType.TRINKET && inventory.equipTrinket(next);
@@ -156,18 +156,18 @@ public class Game {
         return next == null ? "Předmět byl sundán." : "Vybaveno: " + item.getName() + ".";
     }
 
-    // ------------------------------------ predani obchodu a rozhodnuti o zacatku boje ------------------------------------
+    // predani obchodu a rozhodnuti o zacatku boje
 
     public void continueShop() {
         if (phase != Phase.SHOP) return;
-        // Obchodovani prerusi radu prazdnych navstev. Samotne vybaveni predmetu ji neprerusi.
+        // trade resetne prazdne navstevy samotne prepnuti vybavy ne
         unchangedVisits = traded ? 0 : unchangedVisits + 1;
         traded = false;
         if (unchangedVisits >= 2) startBattle();
         else current = 1 - current;
     }
 
-    // ------------------------------------ zahajeni souboje ------------------------------------
+    // zahajeni souboje
 
     private void startBattle() {
         for (Player player : players) player.resetBattle();
@@ -178,16 +178,16 @@ public class Game {
         beginTurn();
     }
 
-    // ------------------------------------ zacatek tahu: vydrz, talisman a casovane ucinky ------------------------------------
+    // zacatek tahu stamina talisman a efekty s timerem
 
     private void beginTurn() {
-        // ------------------------------------ vydrz a prazdny plan noveho tahu ------------------------------------
+        // stamina a prazdny plan noveho tahu
 
         Player actor = getCurrentPlayer();
         actor.beginTurn();
         report((isPreparation() ? "Příprava" : "Kolo " + getCombatRound())
                 + " (" + getTurnPosition() + "): " + actor.getName() + ".");
-        // ------------------------------------ pasivni talisman pred casovanymi ucinky ------------------------------------
+        // pasivni talisman pred casovanymi efekty
 
         Item trinket = actor.getEquipment().getEquippedTrinket();
         if (trinket != null) {
@@ -205,11 +205,11 @@ public class Game {
             if (actor.getHealth() > before) report(trinket.getName() + ": obnoveno životů: " + (actor.getHealth() - before) + ".");
             if (cleansed > 0) report(trinket.getName() + ": odstraněné zbývající poškození: " + cleansed + ".");
         }
-        // ------------------------------------ jednotlive ucinky v poradi vzniku ------------------------------------
+        // jednotlive efekty v poradi vzniku
 
-        // getEffects() vraci kopii seznamu: hotovy ucinek muzeme odebrat i behem pruchodu.
+        // kopie seznamu dovoli mazat hotove efekty behem loopu
         for (Damage effect : actor.getEffects()) {
-            int amount = effect.takeTick(); // snimek drzi poradi i pri odstranovani ucinku
+            int amount = effect.takeTick(); // kopie drzi poradi i pri mazani efektu
             if (effect.getType() == Damage.DamageType.HEAL) {
                 int before = actor.getHealth();
                 actor.heal(amount);
@@ -222,12 +222,12 @@ public class Game {
             if (effect.getTimer() == 0) actor.removeEffect(effect);
             if (finishIfDefeated()) return;
         }
-        // ------------------------------------ konec ochrany stitu z predchoziho tahu ------------------------------------
+        // konec ochrany stitu z predchoziho tahu
 
         actor.clearShield(); // predchozi stit kryje i uvodni davky
     }
 
-    // ------------------------------------ provedeni planu a predani tahu ------------------------------------
+    // provedeni planu a predani tahu
 
     public void endTurn() {
         if (phase != Phase.COMBAT) return;
@@ -238,15 +238,15 @@ public class Game {
             if (finishIfDefeated()) return;
         }
         turn++;
-        // Indexy hracu jsou 0 a 1; tento vyraz je vzajemne prohodi.
+        // prohodi indexy hracu 0 a 1
         current = 1 - current;
         beginTurn();
     }
 
-    // ------------------------------------ kontrola a pridani akce do planu ------------------------------------
+    // kontrola a pridani akce do planu
 
     public String act(Item item) {
-        // Nejdrive overime cely pokus. Pri odmitnuti se plan ani vydrz nezmeni.
+        // nejdriv check cele akce pri odmitnuti zustava plan i stamina
         if (phase != Phase.COMBAT) return "Souboj nyní neprobíhá.";
         if (item == null) return "Vyber předmět.";
         Player actor = getCurrentPlayer();
@@ -255,7 +255,7 @@ public class Game {
         if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
         if (item.isConsumable() && actor.getActions().contains(item)) return "Tento kus je již v plánu.";
 
-        // Pracovni kopie umozni overit novou cenu jeste pred prepsanim skutecneho planu.
+        // na kopii zkontrolujeme cenu nez prepiseme plan
         List<Item> next = new ArrayList<>(actor.getActions());
         next.add(item);
         if (!replacePlan(next)) return "Nemáš dost výdrže.";
@@ -263,21 +263,21 @@ public class Game {
                 + ". Provede se při ukončení tahu.";
     }
 
-    // ------------------------------------ vypocet cen a rezervace vydrze ------------------------------------
+    // vypocet cen a rezervace staminy
 
     public int getActionCost(Item item) {
-        // Cena PRISTIHO pridani: zapocitame vsechna dosavadni pouziti v planu.
+        // cena dalsiho pridani pocita vsechna dosavadni pouziti v planu
         return actionCost(item, getCurrentPlayer().getActions());
     }
 
     public int getPlannedActionCost(int index) {
         List<Item> plan = getCurrentPlayer().getActions();
         if (index < 0 || index >= plan.size()) return 0;
-        // Cena ULOZENE akce: subList(0, index) obsahuje pouze akce pred ni.
+        // cena ulozene akce pocita jen akce pred ni
         return actionCost(plan.get(index), plan.subList(0, index));
     }
 
-    // Porovnavame identitu kusu (==): dve stejne pojmenovane zbrane jsou ruzne kusy.
+    // porovnavame konkretni instance dve stejne zbrane muzou byt ruzne kusy
     private int actionCost(Item item, List<Item> earlier) {
         int repeats = 0;
         for (Item previous : earlier) {
@@ -294,11 +294,11 @@ public class Game {
 
     private boolean replacePlan(List<Item> next) {
         Player actor = getCurrentPlayer();
-        // Player vrati rezervaci stareho planu a odecte cenu noveho. Neprovadi jeste zadnou akci.
+        // vratime cenu stareho planu a odecteme novou akce jeste nebezely
         return actor.replacePlan(next, planCost(actor.getActions()), planCost(next));
     }
 
-    // ------------------------------------ odebrani naplanovane akce ------------------------------------
+    // odebrani naplanovane akce
 
     public boolean removePlannedAction(int index) {
         if (phase != Phase.COMBAT) return false;
@@ -308,7 +308,7 @@ public class Game {
         return replacePlan(next);
     }
 
-    // ------------------------------------ provedeni jednoho predmetu z planu ------------------------------------
+    // provedeni jednoho itemu z planu
 
     private void resolveAction(Item item) {
         Player actor = getCurrentPlayer();
@@ -347,14 +347,14 @@ public class Game {
         if (item.isConsumable()) actor.removeFromInventory(item);
     }
 
-    // ------------------------------------ utocny bonus vybaveneho talismanu ------------------------------------
+    // utocny bonus vybaveneho talismanu
 
     private int attackBonus(Player player) {
         Item trinket = player.getEquipment().getEquippedTrinket();
         return trinket != null && trinket.getPassive() == Item.Passive.ATTACK_BONUS ? trinket.getPower() : 0;
     }
 
-    // ------------------------------------ ukonceni souboje, odmeny a dalsi souboj ------------------------------------
+    // ukonceni souboje odmeny a dalsi souboj
 
     private boolean finishIfDefeated() {
         if (players[0].isAlive() && players[1].isAlive()) return false;

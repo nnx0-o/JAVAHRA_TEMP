@@ -1,7 +1,7 @@
-// Sklada ceske popisy z aktualnich hodnot predmetu a ucinku.
+// sklada ceske popisy z aktualnich hodnot itemu a efektu
 public final class GameText {
 
-    // ------------------------------------ nazvy typu poskozeni ------------------------------------
+    // nazvy typu poskozeni
 
     public String damageType(Damage.DamageType type) {
         return switch (type) {
@@ -11,7 +11,7 @@ public final class GameText {
         };
     }
 
-    // ------------------------------------ kratky popis predmetu v tabulce ------------------------------------
+    // kratky popis itemu v tabulce
 
     public String summary(Item item) {
         int power = item.getPower();
@@ -34,7 +34,7 @@ public final class GameText {
         };
     }
 
-    // ------------------------------------ stejny prehled vlastnosti pro kazdy predmet ------------------------------------
+    // stejny prehled vlastnosti pro kazdy item
 
     public String description(Item item) {
         String timing = switch (item.getItemType()) {
@@ -57,14 +57,14 @@ public final class GameText {
                 : "\nPoužití: opakovaně, zůstává v inventáři.");
     }
 
-    // ------------------------------------ zbytek ucinku bez simulace budoucich davek ------------------------------------
+    // zbytek efektu bez simulace budoucich davek
 
     public String effect(Damage effect) {
         return damageType(effect.getType()) + ": " + effect.getAmount()
                 + " zbývá / " + effect.getTimer() + " tahů";
     }
 
-    // ------------------------------------ sila jedne davky, pocet tahu a celkova sila ------------------------------------
+    // sila jedne davky pocet tahu a celkova sila
 
     private String timed(int power, int turns) {
         return power + " × " + turns + " (" + Math.multiplyExact(power, turns) + ")";

@@ -3,7 +3,7 @@ import java.util.List;
 
 public class Player {
 
-    // ------------------------------------ jmeno, inventar a stav hrace ------------------------------------
+    // jmeno inventar a stav hrace
 
     public static final int MAX_HEALTH = GameRules.MAX_HEALTH;
     private final String name;
@@ -14,18 +14,18 @@ public class Player {
     private int shield;
     private int nextStamina;
 
-    // ------------------------------------ plan tahu a casovane ucinky ------------------------------------
+    // plan tahu a efekty s timerem
 
     private final List<Damage> effects = new ArrayList<>();
     private final List<Item> actions = new ArrayList<>();
 
-    // ------------------------------------ vytvoreni hrace ------------------------------------
+    // vytvoreni hrace
 
     public Player(String name) {
         this.name = name == null || name.isBlank() ? "Hráč" : name.trim();
     }
 
-    // ------------------------------------ cteni jmena, zdroju a bojoveho stavu ------------------------------------
+    // cteni jmena zdroju a bojoveho stavu
 
     public String getName() {
         return name;
@@ -55,9 +55,9 @@ public class Player {
         return health > 0;
     }
 
-    // Kopie chrani seznam pred pridavanim zvenku; objekty ucinku zustavaji sdilene.
+    // kopie chrani seznam pred pridavanim zvenku efekty zustavaji sdilene
     public List<Damage> getEffects() {
-        // Kopie seznamu sdili objekty Damage: takeTick() tedy stale meni skutecny ucinek.
+        // kopie sdili instance efektu takze tick meni skutecny efekt
         return List.copyOf(effects);
     }
 
@@ -65,10 +65,10 @@ public class Player {
         return List.copyOf(actions);
     }
 
-    // ------------------------------------ pristup k inventari a zmena jeho obsahu ------------------------------------
+    // pristup k inventari a zmena jeho obsahu
 
     public Inventory getEquipment() {
-        // Vraci cely spravce inventare, ktery si pamatuje take vybavenou zbroj a talisman.
+        // vrati manager inventare vcetne armoru a talismanu
         return inventory;
     }
 
@@ -84,7 +84,7 @@ public class Player {
         inventory.remove(item);
     }
 
-    // ------------------------------------ zmena zlata a zdravi ------------------------------------
+    // zmena goldu a hp
 
     public void changeGold(int amount) {
         gold = Math.max(0, gold + amount);
@@ -98,19 +98,19 @@ public class Player {
         health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
     }
 
-    // ------------------------------------ bezna maximalni vydrz ------------------------------------
+    // bezna maximalni stamina
 
     public int getMaxStamina() {
         return GameRules.MAX_STAMINA;
     }
 
-    // ------------------------------------ obnoveni stavu na zacatku souboje a tahu ------------------------------------
+    // reset stavu na zacatku souboje a tahu
 
     public void resetBattle() {
         health = MAX_HEALTH;
         stamina = getMaxStamina();
         shield = nextStamina = 0;
-        effects.clear(); // zlato a predmety zustavaji ale bojove ucinky ne
+        effects.clear(); // gold a itemy zustavaji ale bojove efekty ne
         actions.clear();
     }
 
@@ -118,10 +118,10 @@ public class Player {
         stamina = getMaxStamina() + nextStamina; // bonus se neprirezava na bezne maximum
         nextStamina = 0;
         actions.clear();
-        // Stit se smaze az po uvodnich ucincich, aby pokryl i prichozi jed.
+        // stit smazeme az po startovnich efektech aby kryl i jed
     }
 
-    // ------------------------------------ zmena stitu a vydrze ------------------------------------
+    // zmena stitu a staminy
 
     public void clearShield() {
         shield = 0;
@@ -139,24 +139,24 @@ public class Player {
         stamina += Math.max(0, amount);
     }
 
-    // ------------------------------------ ulozeni planu a prepocet rezervovane vydrze ------------------------------------
+    // ulozeni planu a prepocet rezervovane staminy
 
     public boolean replacePlan(List<Item> plan, int previousCost, int nextCost) {
-        // Vydrz uz nezahrnuje stary plan. Jeho cenu vratime do rozpoctu a odecteme novou.
-        // Kdyz novy plan neprojde kontrolou, puvodni plan i vydrz zustanou beze zmeny.
+        // stamina uz nema cenu stareho planu tak ji vratime a odecteme novou
+        // kdyz novy plan neprojde puvodni plan i stamina zustavaji
         int budget = stamina + previousCost;
         if (nextCost < 0 || nextCost > budget) return false;
         stamina = budget - nextCost;
         actions.clear();
         actions.addAll(plan);
-        // Pouzite predmety zjistujeme primo z planu; neudrzujeme druhou kopii stejneho stavu.
+        // pouzite itemy cteme z planu bez druhe kopie stavu
         return true;
     }
 
-    // ------------------------------------ pridavani a ocista samostatnych casovanych ucinku ------------------------------------
+    // pridavani a ocista samostatnych efektu s timerem
 
     public void addEffect(Damage effect) {
-        effects.add(effect); // Jedy a leceni maji samostatne casovace v poradi vzniku.
+        effects.add(effect); // jedy a heal maji vlastni timery podle poradi vzniku
     }
 
     public void removeEffect(Damage effect) {
@@ -173,7 +173,7 @@ public class Player {
         return Math.max(0, budget) - remaining;
     }
 
-    // ------------------------------------ prichozi poskozeni: zbroj, stit a zdravi ------------------------------------
+    // prichozi poskozeni armor stit a hp
 
     public int receiveDamage(int amount, Damage.DamageType type) {
         int reduced = Math.max(0, amount);
@@ -181,7 +181,7 @@ public class Player {
         if (armor != null && armor.getDamageType() == type) {
             reduced = (int) Math.round(reduced * (100 - armor.getPower()) / 100.0);
         }
-        int blocked = Math.min(shield, reduced); // Zbroj se vyhodnoti pred stitem.
+        int blocked = Math.min(shield, reduced); // armor se pocita pred stitem
         shield -= blocked;
         reduced -= blocked;
         int previous = health;
