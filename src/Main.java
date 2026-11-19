@@ -94,7 +94,7 @@ public class Main {
         navigationElements.addAll(List.of(
                 menuHeading,
                 menuBackButton,
-                button(NAMES, 2, 36, "F1  Návod", () -> open(HELP)),
+                button(NAMES, 2, 36, "H  Návod", () -> open(HELP)),
                 button(NAMES, 107, 36, "R  Obnovit", this::refresh)
         ));
 
@@ -205,7 +205,7 @@ public class Main {
             combatPlanPage = 0;
             showGame();
         });
-        label(COMBAT, 64, 34, "I: popis výbavy", MUTED);
+        label(COMBAT, 64, 34, "I: popis vybrané výbavy", MUTED);
     }
 
     private void buildDocuments() {
@@ -250,7 +250,7 @@ public class Main {
         helpLines = wrapText(List.of("Začni tady",
                 "Nakup vybavení a potvrď pokračování. Obchod končí po dvou návštěvách bez nákupu nebo prodeje.",
                 "V obchodě lze vybavit jednu zbroj a jeden talisman. Pěst je trvale v inventáři, mimo deset míst pro nákup.",
-                "V boji přidává Enter na výbavě akci do plánu. Enter na akci v plánu ji odebere. I otevře popis výbavy.",
+                "V boji přidává Enter na výbavě akci do plánu. Enter na akci v plánu ji odebere. I otevře popis vybraného předmětu ve výbavě vlevo.",
                 "Každý hráč má přípravný tah bez útoků. Potom začínají běžná kola.",
                 "Výdrž se rezervuje při plánování. Opakování stejného kusu stojí více; nový vlastní tah cenu obnoví.",
                 "Plán se provede shora dolů po potvrzení konce tahu. Smrt jej okamžitě zastaví. Lektvar se spotřebuje až při provedení.",
@@ -260,11 +260,10 @@ public class Main {
                 "Odpovídající zbroj sníží každý zásah včetně dávek jedem, výsledek se zaokrouhlí. Potom se použije štít a nakonec životy.",
                 "Štíty se sčítají. Starý štít kryje i úvodní účinky příštího vlastního tahu, potom zanikne.",
                 "Tři vítězství ukončí zápas. Nevyužité předměty a zlato zůstávají do dalšího souboje.",
-                "F1/H otevře návod. Esc vrátí předchozí menu. R obnoví obsah. Ctrl+C ukončí hru."));
+                "H otevře návod. Esc vrátí předchozí menu. R obnoví obsah. Ctrl+C ukončí hru."));
     }
 
     private void registerKeys() {
-        tui.onKey("F1", () -> open(HELP));
         tui.onKey("h", () -> open(HELP));
         // tui.onKey("l", () -> open(HISTORY));
         tui.onKey("ESC", this::back);
@@ -362,7 +361,9 @@ public class Main {
     private void refresh() {
         // refresh jen cte herni stav nesmi posunout tah ani losovat novy shop
 
-        tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1/H: návod  R: obnovit  Esc: zpět");
+        tui.setStatus("Šipky: výběr  Enter: potvrdit  "
+                + (layer == COMBAT ? "I: popis vybrané výbavy  " : "")
+                + "H: návod  R: obnovit  Esc: zpět");
         tui.setTheme(game == null ? WHITE : game.getCurrentIndex() == 0 ? ORANGE : MINT);
         moveElements(navigationElements, true);
         menuBackButton.visible = !previousLayers.isEmpty();

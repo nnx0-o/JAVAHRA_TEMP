@@ -72,7 +72,7 @@ private void buildMenus() {
 Skutečný příklad z vytvoření navigace:
 
 ```java
-button(NAMES, 2, 36, "F1  Návod", () -> open(HELP));
+button(NAMES, 2, 36, "H  Návod", () -> open(HELP));
 ```
 
 Při vytváření menu vznikne tlačítko. `open(HELP)` se v tu chvíli **nevolá**. Lambda `() -> open(HELP)` je akce, kterou si tlačítko uloží do svého pole `action`.

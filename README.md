@@ -4,7 +4,7 @@ Lokální hra pro dva hráče u jedné klávesnice. Hráči nakupují vybavení,
 
 ## Spuštění
 
-Ve VS Code použij **Run Java** nad metodou `main`, nebo vyber konfiguraci **Duel** a stiskni F5. Hra běží v aktuálním terminálu.
+Ve VS Code použij **Run Java** nad metodou `main`, nebo spusť konfiguraci **Duel** tlačítkem pro spuštění. Hra běží v aktuálním terminálu.
 
 V samostatném terminálu, otevřeném ve složce projektu:
 
@@ -15,7 +15,7 @@ src/oracleJdk-27/bin/java -cp bin Main
 
 Pokud máš JDK v systémové cestě, stačí `javac` a `java`. Adresář `src/oracleJdk-27` obsahuje přibalené JDK, nikoli zdrojový kód hry. `bin` je vygenerovaný výstup kompilace.
 
-Rozhraní je navržené pro **140 × 38 znaků**. Kontrola minimální velikosti je dočasně zakomentovaná; v menším okně se obsah ořízne. Šipky vybírají, Enter potvrzuje, F1/H otevře návod, I popis výbavy, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
+Rozhraní je navržené pro **140 × 38 znaků**. Kontrola minimální velikosti je dočasně zakomentovaná; v menším okně se obsah ořízne. Šipky vybírají, Enter potvrzuje, H otevře návod, I během boje popis vybraného předmětu ve výbavě vlevo, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
 
 ## Který soubor má jaký důvod
 

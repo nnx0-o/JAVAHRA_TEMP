@@ -723,12 +723,6 @@ public class MiniTui {
             return;
         }
 
-        Runnable helpShortcut = key.equals("F1") ? keyCallbacks.get(key) : null;
-        if (helpShortcut != null) {
-            helpShortcut.run(); // napovedu pustime i behem psani
-            return;
-        }
-
         if (editing && focusedElement instanceof Input input) {
             if (key.equals("ENTER") || key.equals("ESC")) {
                 editing = false;
@@ -751,7 +745,9 @@ public class MiniTui {
         }
 
         // registrovany hotkey ma prednost pred defaultem minitui
-        Runnable shortcut = keyCallbacks.get(key);
+        // pismenne hotkeys funguji i se shiftem nebo caps lockem mimo psani
+        String shortcutKey = key.codePointCount(0, key.length()) == 1 ? key.toLowerCase(Locale.ROOT) : key;
+        Runnable shortcut = keyCallbacks.get(shortcutKey);
         if (shortcut != null) {
             shortcut.run();
             return;
@@ -1049,11 +1045,9 @@ public class MiniTui {
                         case 'B' -> "DOWN";
                         case 'C' -> "RIGHT";
                         case 'D' -> "LEFT";
-                        case 'P' -> "F1";
                         case 'R' -> escape.toString().startsWith("\033[") ? escape.toString() : null;
                         case 't' -> escape.toString().startsWith("\033[8;") ? escape.toString() : null;
                         case '~' -> switch (escape.substring(2, escape.length() - 1).split(";", 2)[0]) {
-                            case "11" -> "F1";
                             case "5" -> "PGUP";
                             case "6" -> "PGDN";
                             default -> null;
@@ -1221,7 +1215,6 @@ public class MiniTui {
                     case "Enter" -> "ENTER";
                     case "Escape" -> "ESC";
                     case "Backspace" -> "BACKSPACE";
-                    case "F1" -> "F1";
                     case "PageUp" -> "PGUP";
                     case "PageDown" -> "PGDN";
                     default -> character > 0 && Character.isValidCodePoint(character)
