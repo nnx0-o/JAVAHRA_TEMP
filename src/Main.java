@@ -61,6 +61,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        if (MiniTui.openTerminal(Main.class, args)) return;
         new Main().tui.start();
     }
 

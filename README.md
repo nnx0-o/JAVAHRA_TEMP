@@ -4,7 +4,7 @@ Lokální hra pro dva hráče u jedné klávesnice. Hráči nakupují vybavení,
 
 ## Spuštění
 
-Ve VS Code použij **Run Java** nad metodou `main`, nebo vyber konfiguraci **Duel** a stiskni F5. Nastavení v [.vscode/launch.json](.vscode/launch.json) používá integrovaný terminál.
+Ve VS Code použij **Run Java** nad metodou `main`, nebo vyber konfiguraci **Duel** a stiskni F5. Hra se na Windows a Linuxu s desktopem otevře v novém terminálovém okně, které se po ukončení hry zavře. Na Linuxu se použije `x-terminal-emulator` nebo `xterm`. Pokud launcher není dostupný, hra zůstane v původním terminálu, stejně jako na macOS a bez desktopu.
 
 V samostatném terminálu, otevřeném ve složce projektu:
 
@@ -14,6 +14,8 @@ src/oracleJdk-27/bin/java -cp bin Main
 ```
 
 Pokud máš JDK v systémové cestě, stačí `javac` a `java`. Adresář `src/oracleJdk-27` obsahuje přibalené JDK, nikoli zdrojový kód hry. `bin` je vygenerovaný výstup kompilace.
+
+Pro spuštění přímo v původním terminálu použij `java -Dminitui.currentTerminal=true -cp bin Main`.
 
 Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F1/H otevře návod, I popis výbavy, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
 
@@ -38,7 +40,7 @@ Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F
 
 ### 1. Od spuštění k tlačítku
 
-`Main.main` vytvoří aplikaci a spustí `MiniTui.start`. Konstruktor aplikace jednou vytvoří všechny nabídky a zaregistruje jejich akce.
+`Main.main` nejprve přes `MiniTui.openTerminal` zkusí spustit hru v novém terminálu. Proces ve vlastním terminálu pak vytvoří aplikaci a spustí `MiniTui.start`. Konstruktor aplikace jednou vytvoří všechny nabídky a zaregistruje jejich akce.
 
 MiniTui má vstupní vlákno, které čte klávesy a ukládá je do fronty. Hlavní smyčka klávesy zpracuje, spustí odpovídající akci a vykreslí obrazovku. Herní změny proto probíhají v hlavní smyčce.
 

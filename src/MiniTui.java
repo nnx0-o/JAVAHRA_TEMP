@@ -7,6 +7,70 @@ import java.util.function.Consumer;
 // input jen posila klavesy hlavni loop je zpracuje
 public class MiniTui {
 
+    public static boolean openTerminal(Class<?> mainClass, String[] args) {
+        // child uz vlastni okno ma jinak by se terminaly oteviraly porad dokola
+        if (Boolean.getBoolean("minitui.inTerminal") || Boolean.getBoolean("minitui.currentTerminal")) return false;
+        String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
+        boolean windows = os.startsWith("windows");
+        if (!windows && (os.contains("mac")
+                || System.getenv("DISPLAY") == null && System.getenv("WAYLAND_DISPLAY") == null)) return false;
+
+        String java = new File(System.getProperty("java.home"), "bin/" + (windows ? "java.exe" : "java")).getAbsolutePath();
+        StringJoiner classPath = new StringJoiner(File.pathSeparator);
+        for (String entry : System.getProperty("java.class.path").split(File.pathSeparator, -1)) {
+            classPath.add(new File(entry.isEmpty() ? "." : entry).getAbsolutePath());
+        }
+        // debugger port z ide nepredavame druhy proces by se na nej nepripojil
+        List<String> child = new ArrayList<>(List.of(java, "-Dminitui.inTerminal=true", "-cp", classPath.toString(), mainClass.getName()));
+        child.addAll(Arrays.asList(args));
+        List<List<String>> commands = new ArrayList<>();
+        if (windows) {
+            StringJoiner arguments = new StringJoiner(" ");
+            for (String argument : child.subList(1, child.size())) arguments.add(windowsArgument(argument));
+            String script = "$ErrorActionPreference = 'Stop'; Start-Process -FilePath " + powershellString(java)
+                    + " -ArgumentList " + powershellString(arguments.toString())
+                    + " -WorkingDirectory " + powershellString(System.getProperty("user.dir")) + " -Wait";
+            commands.add(windowsCommand(script).command());
+        } else {
+            for (String terminal : List.of("x-terminal-emulator", "xterm")) {
+                List<String> command = new ArrayList<>(List.of(terminal, "-geometry", "140x38", "-e"));
+                command.addAll(child);
+                commands.add(command);
+            }
+        }
+        for (List<String> command : commands) {
+            try {
+                // bez shellu kolem hry se okno po konci javy samo zavre
+                Process terminal = new ProcessBuilder(command)
+                        .directory(new File(System.getProperty("user.dir"))).inheritIO().start();
+                if (terminal.waitFor() == 0) return true;
+            } catch (IOException unavailable) {
+                // bez launcheru zkusime dalsi nebo zustaneme v puvodnim terminalu
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String powershellString(String value) {
+        return "'" + value.replace("'", "''") + "'";
+    }
+
+    private static String windowsArgument(String value) {
+        StringBuilder result = new StringBuilder("\"");
+        int slashes = 0;
+        for (char c : value.toCharArray()) {
+            if (c == '\\') slashes++;
+            else {
+                result.append("\\".repeat(c == '"' ? slashes * 2 + 1 : slashes)).append(c);
+                slashes = 0;
+            }
+        }
+        return result.append("\\".repeat(slashes * 2)).append('"').toString();
+    }
+
     public static final class Color {
         private Color() {}
 
