@@ -1,18 +1,12 @@
 public class Damage {
 
-    // jaky efekt to je
-
     public enum DamageType {
         PHYSICAL, POISON, HEAL
     }
 
-    // kolik jeste zbyva a na jak dlouho
-
     private final DamageType type;
     private int amount; // tohle je cely zbytek ne jedna davka
     private int timer;
-
-    // novy efekt
 
     public Damage(DamageType type, int amount, int timer) {
         if (type == null || amount < 0 || timer < 1) {
@@ -22,8 +16,6 @@ public class Damage {
         this.amount = amount;
         this.timer = timer;
     }
-
-    // co z efektu jeste zbyva
 
     public DamageType getType() {
         return type;
@@ -37,8 +29,6 @@ public class Damage {
         return timer;
     }
 
-    // ukousneme jednu davku
-
     public int takeTick() {
         int result = timer == 0 ? 0 : (int) Math.round((double) amount / timer);
         if (timer > 0) {
@@ -47,8 +37,6 @@ public class Damage {
         }
         return result;
     }
-
-    // tady ubirame jed pri ociste
 
     public int reduceRemaining(int maximum) {
         int removed = Math.min(amount, Math.max(0, maximum));

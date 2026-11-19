@@ -3,17 +3,11 @@ import java.util.List;
 
 public final class ItemCatalog {
 
-    // pest ma kazdy od zacatku
-
     public static final Item FIST = new Item(ItemType.DAMAGE, "Pěst", 0,
             GameRules.BASIC_STAMINA_COST, GameRules.BASIC_DAMAGE, 1, Damage.DamageType.PHYSICAL,
             Rarity.COMMON, 1, 1, Item.Passive.NONE);
 
-    // vsechny typy itemu
-
     private static final List<Item> ITEMS = createItems();
-
-    // katalog
 
     private ItemCatalog() {
     }
@@ -22,12 +16,9 @@ public final class ItemCatalog {
         return ITEMS;
     }
 
-    // tady jsou vsechny itemy
-
     private static List<Item> createItems() {
         List<Item> items = new ArrayList<>();
         // u efektu na vic tahu zadavame davku a pocet tahu
-        // fyzicke zbrane
         weapon(items, "Dýka", 3, 2, 4, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 2, 3);
         weapon(items, "Krátký meč", 4, 3, 6, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
         weapon(items, "Tesák", 5, 3, 7, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 2);
@@ -40,7 +31,6 @@ public final class ItemCatalog {
         weapon(items, "Obouruční meč", 12, 8, 19, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Mistrovská čepel", 14, 5, 13, 1, Damage.DamageType.PHYSICAL, Rarity.RARE, 1, 1);
         weapon(items, "Železný palcát", 4, 4, 8, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
-        // jedove zbrane
         weapon(items, "Jedovatá jehla", 3, 2, 2, 3, Damage.DamageType.POISON, Rarity.COMMON, 2, 3);
         weapon(items, "Hadí dýka", 5, 3, 2, 4, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
         weapon(items, "Morová hůl", 7, 4, 4, 3, Damage.DamageType.POISON, Rarity.UNCOMMON, 1, 2);
@@ -97,10 +87,8 @@ public final class ItemCatalog {
         trinket(items, "Válečníkův amulet", 10, 2, Item.Passive.ATTACK_BONUS, Rarity.UNCOMMON);
         trinket(items, "Hadí kámen", 7, 3, Item.Passive.CLEANSE_POISON, Rarity.UNCOMMON);
         trinket(items, "Jantarová brož", 5, 2, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON);
-        return List.copyOf(items); // pri nakupu z toho vznikne vlastni kus
+        return List.copyOf(items);
     }
-
-    // helpery pro jednotlive typy
 
     // text k tomu slozi gametext tady staci hodnoty
     private static void weapon(List<Item> items, String name, int price, int cost, int power,

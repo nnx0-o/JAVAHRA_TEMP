@@ -3,13 +3,9 @@ import java.util.List;
 
 public class Inventory {
 
-    // co hrac ma a co ma na sobe
-
     private final List<Item> items = new ArrayList<>(List.of(ItemCatalog.FIST));
     private Item equippedArmor;
     private Item equippedTrinket;
-
-    // co je v inventari
 
     public List<Item> getItems() {
         return List.copyOf(items);
@@ -27,11 +23,9 @@ public class Inventory {
         return equippedTrinket;
     }
 
-    // pridat nebo vyndat item
-
     public boolean add(Item item) {
         if (item == null || items.contains(item) || items.size() >= getCapacity()) return false;
-        items.add(item); // ten samy kus sem dvakrat nedame
+        items.add(item);
         return true;
     }
 
@@ -41,8 +35,6 @@ public class Inventory {
         if (item == equippedTrinket) equippedTrinket = null;
         return true;
     }
-
-    // oblect nebo sundat
 
     public boolean equipArmor(Item item) {
         if (item != null && (item.getItemType() != ItemType.ARMOR || !items.contains(item))) return false;

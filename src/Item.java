@@ -1,7 +1,5 @@
 public class Item {
 
-    // druhy pasivnich efektu
-
     public enum Passive {
         NONE,
         REGENERATION,
@@ -10,8 +8,6 @@ public class Item {
         ATTACK_BONUS,
         CLEANSE_POISON
     }
-
-    // tohle uz se na itemu nemeni
 
     private final ItemType itemType;
     private final String name;
@@ -24,8 +20,6 @@ public class Item {
     private final int minStock;
     private final int maxStock;
     private final Passive passive;
-
-    // novy item
 
     public Item(ItemType itemType, String name, int price, int staminaCost, int power,
             int duration, Damage.DamageType damageType, Rarity rarity, int minStock,
@@ -47,8 +41,6 @@ public class Item {
         this.maxStock = maxStock;
         this.passive = passive;
     }
-
-    // zakladni udaje itemu
 
     public ItemType getItemType() {
         return itemType;
@@ -74,8 +66,6 @@ public class Item {
         return power;
     } // u efektu na vic tahu je to jedna davka
 
-    // jestli efekt trva vic tahu a kolik da celkem
-
     public boolean hasTimedEffect() {
         return itemType == ItemType.DAMAGE && damageType != Damage.DamageType.PHYSICAL
                 || itemType == ItemType.HEAL && duration > 1;
@@ -85,8 +75,6 @@ public class Item {
     public int getTotalPower() {
         return hasTimedEffect() ? Math.multiplyExact(power, duration) : power;
     }
-
-    // dalsi udaje itemu
 
     public int getDuration() {
         return duration;
@@ -112,8 +100,6 @@ public class Item {
         return passive;
     }
 
-    // co se spotrebuje a co se nosi
-
     public boolean isConsumable() {
         return itemType == ItemType.HEAL || itemType == ItemType.STAMINA;
     }
@@ -121,8 +107,6 @@ public class Item {
     public boolean isEquipment() {
         return itemType == ItemType.ARMOR || itemType == ItemType.TRINKET;
     }
-
-    // novy kus stejneho itemu
 
     public Item copy() {
         // stejna nabidka ale kazdy nakup je vlastni kus

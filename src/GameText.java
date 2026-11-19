@@ -1,8 +1,6 @@
 // popisy skladame z toho co item opravdu dela
 public final class GameText {
 
-    // nazvy typu poskozeni
-
     public String damageType(Damage.DamageType type) {
         return switch (type) {
             case PHYSICAL -> "Fyzické";
@@ -10,8 +8,6 @@ public final class GameText {
             case HEAL -> "Léčení";
         };
     }
-
-    // kratky popis itemu v tabulce
 
     public String summary(Item item) {
         int power = item.getPower();
@@ -33,8 +29,6 @@ public final class GameText {
             };
         };
     }
-
-    // detail itemu
 
     public String description(Item item) {
         String timing = switch (item.getItemType()) {
@@ -63,8 +57,6 @@ public final class GameText {
         return damageType(effect.getType()) + ": " + effect.getAmount()
                 + " zbývá / " + effect.getTimer() + " tahů";
     }
-
-    // davka krat pocet tahu a k tomu soucet
 
     private String timed(int power, int turns) {
         return power + " × " + turns + " (" + Math.multiplyExact(power, turns) + ")";

@@ -4,22 +4,14 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
-// tady se cte klavesnice a kresli ui
-// nejdriv prvky pak loop a terminal
-// co buttony delaji posila main
 // input jen posila klavesy hlavni loop je zpracuje
 public class MiniTui {
 
-    // barvy a ansi styly
-
-    // styly jsou jen stringy muzeme je poskladat za sebe
-    // zalezi co terminal umi
     public static final class Color {
         private Color() {}
 
         public static final String RESET = "\033[0m";
 
-        // barvy textu
         public static final String BLACK = "\033[30m";
         public static final String RED = "\033[31m";
         public static final String GREEN = "\033[32m";
@@ -38,7 +30,6 @@ public class MiniTui {
         public static final String BRIGHT_WHITE = "\033[97m";
         public static final String DEFAULT = "\033[39m";
 
-        // pozadi jde kombinovat s textem a styly
         public static final String BG_BLACK = "\033[40m";
         public static final String BG_RED = "\033[41m";
         public static final String BG_GREEN = "\033[42m";
@@ -69,7 +60,6 @@ public class MiniTui {
         public static final String DOUBLE_UNDERLINE = "\033[21m";
         public static final String OVERLINE = "\033[53m";
 
-        // jen spojime kody za sebe
         // posledni kod ma prednost
         public static String combine(String... codes) {
             StringBuilder result = new StringBuilder();
@@ -77,32 +67,26 @@ public class MiniTui {
             return result.toString();
         }
 
-        // styl pred text a reset za nej
         public static String apply(String text, String... codes) {
             return combine(codes) + Objects.requireNonNull(text, "text") + RESET;
         }
 
-        // barva textu z palety
         public static String foreground(int index) {
             return sgr(38, 5, channel(index));
         }
 
-        // barva pozadi z palety
         public static String background(int index) {
             return sgr(48, 5, channel(index));
         }
 
-        // text podle rgb
         public static String foreground(int red, int green, int blue) {
             return sgr(38, 2, channel(red), channel(green), channel(blue));
         }
 
-        // pozadi podle rgb
         public static String background(int red, int green, int blue) {
             return sgr(48, 2, channel(red), channel(green), channel(blue));
         }
 
-        // styl muzeme zadat i primo cisly
         // bez parametru je to reset
         public static String sgr(int... parameters) {
             if (parameters.length == 0) return RESET;
@@ -122,13 +106,8 @@ public class MiniTui {
         }
     }
 
-    // ui prvky
-
-    // prvky muzeme vytvorit predem a pridat az pak
     // x a y od nuly z je screen
-    // kreslime viditelne ovladame jen vybiratelne
     public static abstract class Element {
-        // zmenu musi videt i ostatni thready
         // cely update tim atomicky neni akce porad patri do hlavniho loopu
         public volatile int x, y, z;
         public volatile boolean focusable;
@@ -161,23 +140,15 @@ public class MiniTui {
             return visible;
         }
 
-        // puvodni text bez vseho kolem
         // u inputu hodnota u ramecku nadpis
-        // vlastni prvek si to muze prepsat
         public String getText() {
             return "";
         }
 
-        // tady jen pripravime text
-        // vytiskne se to az cele najednou
         // soused vpravo muze sirku zkratit
         public abstract String render(boolean focused, boolean editing, int termWidth);
     }
 
-    // nadpis
-
-    // nadpis se nevybira
-    // bez barvy vezmeme default
     public static class Title extends Element {
         private volatile String text;
         private volatile String colorCode;
@@ -207,7 +178,6 @@ public class MiniTui {
 
         @Override
         public String render(boolean focused, boolean editing, int termWidth) {
-            // nejdriv misto na okraje pak text
             // tady pocitame java znaky ne bunky terminalu
             int maxAllowed = Math.max(4, termWidth - x - 2);
             String cleanText = text.length() > maxAllowed - 4 ? text.substring(0, maxAllowed - 4) : text;
@@ -220,10 +190,6 @@ public class MiniTui {
         }
     }
 
-    // ramecek
-
-    // kazdy kus ramecku posleme na jeho souradnice
-    // vnitrek zustane pro ostatni prvky
     public static class Box extends Element {
         public volatile int width, height;
         public volatile String title;
@@ -268,30 +234,22 @@ public class MiniTui {
             StringBuilder sb = new StringBuilder();
             sb.append(colorCode);
 
-            // horni hrana
             String top = w < 6 ? "+" + "-".repeat(w - 2) + "+"
                     : "+- " + t + " " + "-".repeat(Math.max(0, w - t.length() - 5)) + "+";
-            // nejdriv kurzor na spravne misto
             // terminal zacina od jednicky
             sb.append(String.format("\033[%d;%dH%s", y + 1, x + 1, top));
 
-            // jen boky vnitrek neprepisujeme
             for (int i = 1; i < height - 1; i++) {
                 sb.append(String.format("\033[%d;%dH|", y + 1 + i, x + 1));
                 sb.append(String.format("\033[%d;%dH|", y + 1 + i, x + w));
             }
 
-            // dolni hrana
             String bot = "+" + "-".repeat(Math.max(0, w - 2)) + "+";
             sb.append(String.format("\033[%d;%dH%s", y + height, x + 1, bot)).append(Color.RESET);
             return sb.toString();
         }
     }
 
-    // label
-
-    // jen text neni na co klikat
-    // main sem doplni aktualni text
     public static class Label extends Element {
         private volatile String text;
         public volatile String colorCode = Color.DEFAULT;
@@ -321,10 +279,7 @@ public class MiniTui {
         }
     }
 
-    // input
-
     // vybrat input a psat do nej jsou dva rezimy
-    // enter prepne psani callback dostane text
     public static class Input extends Element {
         public volatile String label;
         public volatile String value;
@@ -367,7 +322,6 @@ public class MiniTui {
 
         // kdyz to nastavime primo callback nevolame
         // zmena hned submit az enterem
-        // vracime sebe at jde chainovat
         public void setValue(String val) {
             this.value = val;
         }
@@ -401,10 +355,6 @@ public class MiniTui {
         }
     }
 
-    // button
-
-    // button jen zavola svoji akci
-    // akce az po enteru pri kresleni ne
     public static class Button extends Element {
         public volatile String text;
         public Runnable action;
@@ -442,9 +392,6 @@ public class MiniTui {
         }
     }
 
-    // radek tabulky
-
-    // zvyraznime jen ukazatel barvy sloupcu nechame
     public static class TableRow extends Button {
         private final List<String> cells;
         private final List<Integer> widths;
@@ -483,8 +430,6 @@ public class MiniTui {
         }
     }
 
-    // text do jedne bunky
-
     // pocitame viditelne bunky z ansi bereme jen styly
     private static String fitCell(String text, int width, boolean pad) {
         StringBuilder result = new StringBuilder();
@@ -517,34 +462,26 @@ public class MiniTui {
         return result.toString();
     }
 
-    // co si loop drzi
-
     // pri zmene vznikne kopie loop muze jet dal
     // cteme casto pridavame malo
     private final List<Element> elements = new CopyOnWriteArrayList<>();
 
-    // sem chodi klavesy z input threadu
-    // loop si je vyzvedne bez cekani
     private final BlockingQueue<String> keyQueue = new LinkedBlockingQueue<>();
     private final Map<String, Runnable> keyCallbacks = new ConcurrentHashMap<>();
     private volatile String theme = Color.WHITE;
     private final List<Runnable> tickListeners = new CopyOnWriteArrayList<>();
 
-    // co je vybrane a jestli se zrovna pise
-    // zatim 80 na 24 pak zjistime skutecnou velikost
     private volatile Element focusedElement = null;
     private volatile boolean editing = false;
     private volatile boolean running = false;
     private volatile int currentZ = 0;
 
-    // rozmery a posun menime spolu
     // i rychle zmenseni a zvetseni musi vyvolat refresh
     private record TerminalGeometry(int width, int height, int left, int top) {}
     private volatile TerminalGeometry terminal = new TerminalGeometry(80, 24, 0, 0);
     private volatile String statusText = "Šipky: výběr | Enter: potvrdit | [ / ]: obrazovka | Ctrl+C: konec";
 
     // cache si resi jen hlavni loop
-    // kdyz se obraz nezmenil netiskneme ho znovu
     private String lastFrame = "";
     private TerminalGeometry lastRenderedGeometry;
     private volatile Process windowsProcess;
@@ -555,10 +492,6 @@ public class MiniTui {
     private boolean terminalRestored;
     private volatile boolean terminalSizeReported;
 
-    // pridat a smazat prvky
-
-    // vratime pridany prvek se stejnym typem
-    // prvni co jde vybrat rovnou vybereme
     public <T extends Element> T add(T el) {
         if (el instanceof Button button && button.colorCode == null) button.colorCode = theme;
         if (el instanceof Input input) input.colorCode = theme;
@@ -570,15 +503,11 @@ public class MiniTui {
     }
 
     public void clear() {
-        elements.clear(); // stare prvky pryc
+        elements.clear();
         focusedElement = null;
         editing = false;
     }
 
-    // callbacky barvy a klavesy
-
-    // tohle zavolame pred kreslenim
-    // refresh neni dalsi herni tah
     public void onTick(Runnable callback) {
         tickListeners.add(callback);
     }
@@ -600,8 +529,6 @@ public class MiniTui {
         else keyCallbacks.put(key, callback);
     }
 
-    // focus a paticka
-
     public void focus(Element element) {
         if (element != null && elements.contains(element) && element.focusable
                 && element.visible && element.z == currentZ) focusedElement = element;
@@ -615,14 +542,11 @@ public class MiniTui {
         return statusText;
     }
 
-    // co je v ui a jak je velky terminal
-
     // kopie seznamu prvky uvnitr jsou porad stejne
     public List<Element> getElements() {
         return List.copyOf(elements);
     }
 
-    // co je vybrane pripadne nic
     public Element getFocusedElement() {
         return focusedElement;
     }
@@ -643,8 +567,6 @@ public class MiniTui {
         return terminal.height();
     }
 
-    // prepinani screenu
-
     // novy screen ukonci psani a dostane novy focus
     // i kdyz nastavime stejny screen
     public void setLayer(int z) {
@@ -657,8 +579,6 @@ public class MiniTui {
     public int getLayer() {
         return currentZ;
     }
-
-    // spustit a ukoncit ui
 
     public void stop() {
         this.running = false;
@@ -704,7 +624,6 @@ public class MiniTui {
                 updateUnixTermSize();
             }
             inputThread.start();
-            // na windows nejdriv zapneme escape sekvence
             if (isWindows && !ready.await(5, TimeUnit.SECONDS)) {
                 throw new IOException("Vypršel čas na otevření konzole Windows");
             }
@@ -749,8 +668,6 @@ public class MiniTui {
         }
     }
 
-    // vratime terminal do puvodniho stavu
-
     private synchronized void restoreTerminal(boolean isWindows) {
         if (terminalRestored) return;
         terminalRestored = true;
@@ -785,10 +702,6 @@ public class MiniTui {
         }
     }
 
-    // co s prislymi klavesami
-
-    // tady uz jsou klavesy stejne na obou systemech
-    // bud piseme nebo ovladame menu
     private void handleKey(String key) {
         // rozmer muze prijit i jako pozice kurzoru v rohu
         // tohle odpovida terminal neni to psany text
@@ -831,8 +744,6 @@ public class MiniTui {
                     input.value = input.value.substring(0, input.value.offsetByCodePoints(input.value.length(), -1));
                     if (input.onChange != null) input.onChange.accept(input.value);
                 }
-            // normalni text i s diakritikou
-            // ridici znaky vynechame
             } else if (key.codePointCount(0, key.length()) == 1
                     && !Character.isISOControl(key.codePointAt(0))) {
                 input.value += key;
@@ -847,8 +758,6 @@ public class MiniTui {
             return;
         }
 
-        // sipky jdou podle polohy na screenu
-        // na sousedni screen jen kdyz tam neco je
         switch (key) {
             case "UP"    -> moveFocus(0, -1);
             case "DOWN"  -> moveFocus(0, 1);
@@ -870,15 +779,11 @@ public class MiniTui {
         }
     }
 
-    // kam posunout focus
-
     // na screenu muzou byt jen labely i to se pocita
     private boolean hasElementsAtZ(int z) {
         return elements.stream().anyMatch(e -> e.z == z && e.visible);
     }
 
-    // kdyz focus prestal platit najdeme novy
-    // kdyz neni co vybrat nechame nic
     private void ensureFocusOnCurrentLayer() {
         if (focusedElement != null && focusedElement.z == currentZ
                 && focusedElement.focusable && focusedElement.visible) return;
@@ -888,7 +793,6 @@ public class MiniTui {
                 .orElse(null);
     }
 
-    // jedna ze ctyr sipek
     // bereme pozici prvku ne jeho velikost
     private void moveFocus(int dx, int dy) {
         ensureFocusOnCurrentLayer();
@@ -903,12 +807,9 @@ public class MiniTui {
             int relX = el.x - focusedElement.x;
             int relY = el.y - focusedElement.y;
 
-            // co je jinym smerem preskocime
             if (dx != 0 && Integer.signum(relX) != dx) continue;
             if (dy != 0 && Integer.signum(relY) != dy) continue;
 
-            // nejdriv co je blizko v tom smeru
-            // cim vic bokem tim hur pri shode vyhraje prvni
             double primaryDist = (dx != 0) ? Math.abs(relX) : Math.abs(relY);
             double secondaryDist = (dx != 0) ? Math.abs(relY) * 6.0 : Math.abs(relX) * 2.5;
             double score = primaryDist + secondaryDist;
@@ -922,9 +823,6 @@ public class MiniTui {
         if (best != null) focusedElement = best;
     }
 
-    // slozime obraz a pripadne vytiskneme
-
-    // nejdriv slozit cele pak vytisknout
     private void renderScreen() {
         ensureFocusOnCurrentLayer();
         TerminalGeometry geometry = terminal;
@@ -932,11 +830,8 @@ public class MiniTui {
         int termHeight = geometry.height();
         int footerRow = termHeight - 1;
         StringBuilder sb = new StringBuilder();
-        // schovat kurzor nahoru a smazat
-        // odesleme az kdyz je opravdu co menit
         sb.append("\033[?25l\033[H\033[2J");
 
-        // okraj podle aktualniho screenu
         String borderChar = (currentZ == 0) ? "-" : "~";
         String borderColor = theme;
         String topBorder = borderColor + (termWidth == 1 ? "+"
@@ -947,8 +842,6 @@ public class MiniTui {
             if (el.z != currentZ || !el.visible || el.x >= termWidth || el.y >= footerRow) continue;
             boolean isFocused = (el == focusedElement);
             boolean isEditing = isFocused && editing;
-            // vpravo uz muze zacinat dalsi prvek
-            // plati i pro vlastni prvky a ramecky
             int renderWidth = renderBoundary(el, termWidth);
             String out = el.render(isFocused, isEditing, renderWidth);
             appendClipped(sb, out, el.x, el.y, renderWidth, footerRow);
@@ -960,8 +853,6 @@ public class MiniTui {
         appendClipped(sb, Color.apply(rawFooter, Color.REVERSE, theme), 0, footerRow,
                 maxFooterWidth, termHeight);
 
-        // pri psani vratime kurzor na konec textu
-        // ctyri znaky zabira ramecek inputu
         // tady bereme jeden znak jako jeden sloupec
         if (editing && focusedElement instanceof Input input) {
             int right = renderBoundary(input, termWidth);
@@ -983,8 +874,6 @@ public class MiniTui {
         }
     }
 
-    // kam az muze prvek kreslit
-
     private int renderBoundary(Element element, int width) {
         if (element instanceof Box) return width;
         for (Element other : elements) {
@@ -995,7 +884,6 @@ public class MiniTui {
     }
 
     // kurzor posouvame sami at neprepiseme paticku
-    // styly nechame text orizneme ostatni prikazy zahodime
     private static void appendClipped(StringBuilder frame, String text, int x, int y,
                                       int right, int bottom) {
         boolean positioned = false;
@@ -1062,8 +950,6 @@ public class MiniTui {
         frame.append(Color.RESET);
     }
 
-    // ansi parametry a sirka znaku
-
     private static int ansiParameter(String[] parts, int index) {
         if (index >= parts.length || parts[index].isEmpty()) return 1;
         try {
@@ -1077,7 +963,6 @@ public class MiniTui {
         int type = Character.getType(codePoint);
         if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK
                 || type == Character.FORMAT) return 0;
-        // siroke znaky a emoji vetsinou zaberou dve bunky
         if (codePoint >= 0x1100 && (codePoint <= 0x115f || codePoint == 0x2329 || codePoint == 0x232a
                 || codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint != 0x303f
                 || codePoint >= 0xac00 && codePoint <= 0xd7a3 || codePoint >= 0xf900 && codePoint <= 0xfaff
@@ -1086,8 +971,6 @@ public class MiniTui {
                 || codePoint >= 0x1f300 && codePoint <= 0x1faff || codePoint >= 0x20000 && codePoint <= 0x3fffd)) return 2;
         return 1;
     }
-
-    // input na unixu
 
     // na ukonceni nechceme cekat az nekdo zmackne klavesu
     private void readUnixKeys() throws Exception {
@@ -1112,7 +995,6 @@ public class MiniTui {
     }
 
     // zbytek sekvence muze prijit az priste
-    // neznamou sekvenci zahodime celou
     private static final class UnixKeyDecoder {
         private final Consumer<String> keys;
         private final StringBuilder escape = new StringBuilder();
@@ -1127,7 +1009,7 @@ public class MiniTui {
         void accept(int c, long now) {
             if (escape.isEmpty() && (remainingBytes > 0 || c >= 128)) {
                 if (remainingBytes > 0 && (c & 0xc0) == 0x80) {
-                    utf8.write(c); // znak muze dorazit po kouskach
+                    utf8.write(c);
                     if (--remainingBytes == 0) {
                         keys.accept(utf8.toString(StandardCharsets.UTF_8));
                         utf8.reset();
@@ -1189,8 +1071,6 @@ public class MiniTui {
         }
     }
 
-    // zjistime rozmery terminalu
-
     // stty jako zaloha pak se zeptame terminalu
     // ve vscode treba projde dotaz na kurzor i kdyz velikost ne
     private void updateUnixTermSize() {
@@ -1206,20 +1086,16 @@ public class MiniTui {
             Thread.currentThread().interrupt();
         } catch (IOException | NumberFormatException ignored) {
         }
-        // po mereni vratime kurzor kde byl
         System.out.print("\033[18t\0337\033[9999;9999H\033[6n\0338");
         System.out.flush();
     }
 
     private synchronized void updateTerminalGeometry(int width, int height, int left, int top) {
         // minimalizovane okno nekdy vrati nuly
-        // tak si zatim nechame posledni rozmery
         if (width <= 0 || height <= 0 || left < 0 || top < 0) return;
         TerminalGeometry next = new TerminalGeometry(width, height, left, top);
         if (!next.equals(terminal)) terminal = next;
     }
-
-    // pomocne prikazy s timeoutem
 
     private static String execSh(String cmd) throws IOException, InterruptedException {
         return runCommand(new ProcessBuilder("sh", "-c", cmd), 1000);
@@ -1236,10 +1112,7 @@ public class MiniTui {
         }
     }
 
-    // input na windows
-
     // powershell vystup je pipe rozmery musime vzit z konzole
-    // funguje v obycejne konzoli i windows terminalu
     private static final String WINDOWS_CONSOLE_API = """
             $ErrorActionPreference = 'Stop'
             Add-Type -TypeDefinition @'
@@ -1323,7 +1196,6 @@ public class MiniTui {
     }
 
     // znaky posilame jako cisla at se nepletou s oddelovaci
-    // neplatne rozmery proste preskocime
     private void handleWindowsMessage(String line) {
         String[] parts = line.split(",", -1);
         try {

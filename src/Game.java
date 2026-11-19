@@ -4,16 +4,9 @@ import java.util.Random;
 
 public class Game {
 
-    // tady se resi samotna hra
-    // main sem posle akci a dostane zpatky zpravu
-
-    // faze zapasu
-
     public enum Phase {
         ANNOUNCEMENT, SHOP, COMBAT, RESULT, FINISHED
     }
-
-    // hraci obchod historie a stav zapasu
 
     private final Player[] players;
     private final int[] wins = new int[2];
@@ -23,14 +16,12 @@ public class Game {
     private final GameText text = new GameText();
     private Phase phase = Phase.ANNOUNCEMENT;
     private int shopStarter;
-    private int current; // kdo je zrovna na rade
+    private int current;
     private int battle = 1;
     private int turn; // pocitame i pripravne tahy
     private int unchangedVisits; // kolikrat za sebou nikdo nic nekoupil ani neprodal
-    private boolean traded; // jestli se ted neco koupilo nebo prodalo
-    private int winner = -1; // zatim nikdo nevyhral
-
-    // nova hra a kdo zacne
+    private boolean traded;
+    private int winner = -1;
 
     public Game(String firstName, String secondName, Random random) {
         this.random = random;
@@ -40,8 +31,6 @@ public class Game {
         shopStarter = random.nextInt(2); // prvniho vylosujeme pak se stridaji
         current = shopStarter;
     }
-
-    // udaje o zapase
 
     public Player getPlayer(int index) {
         return players[index];
@@ -107,13 +96,9 @@ public class Game {
         return phase == Phase.SHOP && !traded && unchangedVisits == 1;
     }
 
-    // zpravy do historie
-
     private void report(String message) {
         log.add(message);
     }
-
-    // shop a veci kolem nej
 
     public void openShop() {
         if (phase != Phase.ANNOUNCEMENT) return;
@@ -156,8 +141,6 @@ public class Game {
         return next == null ? "Předmět byl sundán." : "Vybaveno: " + item.getName() + ".";
     }
 
-    // dalsi hrac nebo uz boj
-
     public void continueShop() {
         if (phase != Phase.SHOP) return;
         // nakup nebo prodej pocitadlo vynuluje prevleceni ne
@@ -166,8 +149,6 @@ public class Game {
         if (unchangedVisits >= 2) startBattle();
         else current = 1 - current;
     }
-
-    // jdeme bojovat
 
     private void startBattle() {
         for (Player player : players) player.resetBattle();
@@ -178,10 +159,7 @@ public class Game {
         beginTurn();
     }
 
-    // nejdriv vyridime zacatek tahu
-
     private void beginTurn() {
-        // nova stamina a cisty plan
 
         Player actor = getCurrentPlayer();
         actor.beginTurn();
@@ -209,7 +187,7 @@ public class Game {
 
         // jedeme pres kopii at muzeme hotove efekty rovnou mazat
         for (Damage effect : actor.getEffects()) {
-            int amount = effect.takeTick(); // poradi zustava i kdyz neco smazeme
+            int amount = effect.takeTick();
             if (effect.getType() == Damage.DamageType.HEAL) {
                 int before = actor.getHealth();
                 actor.heal(amount);
@@ -226,8 +204,6 @@ public class Game {
         actor.clearShield(); // na tyhle davky jeste stit plati
     }
 
-    // provedeme plan a predame tah
-
     public void endTurn() {
         if (phase != Phase.COMBAT) return;
         Player actor = getCurrentPlayer();
@@ -237,15 +213,11 @@ public class Game {
             if (finishIfDefeated()) return;
         }
         turn++;
-        // ted hraje druhy
         current = 1 - current;
         beginTurn();
     }
 
-    // pridame akci pokud na ni je
-
     public String act(Item item) {
-        // nejdriv overit pak teprve sahat na plan a staminu
         if (phase != Phase.COMBAT) return "Souboj nyní neprobíhá.";
         if (item == null) return "Vyber předmět.";
         Player actor = getCurrentPlayer();
@@ -254,15 +226,12 @@ public class Game {
         if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
         if (item.isConsumable() && actor.getActions().contains(item)) return "Tento kus je již v plánu.";
 
-        // zkusime to nejdriv na kopii
         List<Item> next = new ArrayList<>(actor.getActions());
         next.add(item);
         if (!replacePlan(next)) return "Nemáš dost výdrže.";
         return "Přidáno do plánu: " + item.getName()
                 + ". Provede se při ukončení tahu.";
     }
-
-    // kolik ten plan stoji
 
     public int getActionCost(Item item) {
         // dalsi pouziti pocita vsechno co uz v planu je
@@ -297,8 +266,6 @@ public class Game {
         return actor.replacePlan(next, planCost(actor.getActions()), planCost(next));
     }
 
-    // vyhodime akci z planu
-
     public boolean removePlannedAction(int index) {
         if (phase != Phase.COMBAT) return false;
         List<Item> next = new ArrayList<>(getCurrentPlayer().getActions());
@@ -306,8 +273,6 @@ public class Game {
         next.remove(index);
         return replacePlan(next);
     }
-
-    // co ten item vlastne udela
 
     private void resolveAction(Item item) {
         Player actor = getCurrentPlayer();
@@ -346,14 +311,10 @@ public class Game {
         if (item.isConsumable()) actor.removeFromInventory(item);
     }
 
-    // jestli talisman prida neco k utoku
-
     private int attackBonus(Player player) {
         Item trinket = player.getEquipment().getEquippedTrinket();
         return trinket != null && trinket.getPassive() == Item.Passive.ATTACK_BONUS ? trinket.getPower() : 0;
     }
-
-    // kdo vyhral a co za to dostane
 
     private boolean finishIfDefeated() {
         if (players[0].isAlive() && players[1].isAlive()) return false;
