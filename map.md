@@ -48,7 +48,7 @@ Main
 | [Item.java](src/Item.java) | Neměnné vlastnosti předmětu: jméno, typ, cena, síla, výdrž, délka účinku atd. |
 | [ItemCatalog.java](src/ItemCatalog.java) | Konkrétní předměty a jejich hodnoty. Zde je například definice dýky a trvalé pěsti. |
 | [ItemType.java](src/ItemType.java) | Kategorie předmětu: útok, léčení, štít, výdrž, zbroj, talisman. |
-| [Rarity.java](src/Rarity.java) | Rarity a jejich váhy při losování obchodu. Váha není procento. |
+| `Item.Rarity` v [Item.java](src/Item.java) | Rarity a jejich váhy při losování obchodu. Váha není procento. |
 | [Shop.java](src/Shop.java) | Vylosuje nabídku, kontroluje zásobu a provádí nákup nebo prodej. |
 | [Damage.java](src/Damage.java) | Jeden trvající účinek: typ, zbývající síla a zbývající tahy. Přes název zahrnuje i léčení. |
 | [GameText.java](src/GameText.java) | Z hodnot předmětu nebo účinku skládá český popis. Nerozhoduje o výsledku útoku. |
@@ -214,7 +214,7 @@ Main.refresh: zobrazí zprávu a aktuální stav
 
 [Shop.java](src/Shop.java) drží `stock`: mapu **předmět → počet kusů**. `LinkedHashMap` zachová pořadí nabídky i při snižování zásob.
 
-`Shop.refresh` vybírá druhy podle vah z [Rarity.java](src/Rarity.java). Levné zbraně mají váhu ještě třikrát větší. Představ si losy: součet vah je počet losů a náhodné číslo určí vítězný interval. Vybraný druh se odebere z kandidátů, aby se neopakoval; počet jeho kusů se pak vylosuje zvlášť.
+`Shop.refresh` vybírá druhy podle vah z `Item.Rarity` v [Item.java](src/Item.java). Levné zbraně mají váhu ještě třikrát větší. Představ si losy: součet vah je počet losů a náhodné číslo určí vítězný interval. Vybraný druh se odebere z kandidátů, aby se neopakoval; počet jeho kusů se pak vylosuje zvlášť.
 
 `purchase` ověří zásobu, zlato a místo. Nejprve zkusí vložit kopii do inventáře, až potom ubere zlato a sklad. Když není místo, hráč nepřijde o peníze.
 

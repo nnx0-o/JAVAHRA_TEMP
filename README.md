@@ -27,7 +27,7 @@ Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F
 | [Inventory.java](src/Inventory.java) | Vlastněné kusy předmětů a odkazy na vybavenou zbroj a talisman. |
 | [Item.java](src/Item.java) | Neměnné hodnoty jednoho předmětu a vytvoření kopie pro nákup. |
 | [ItemCatalog.java](src/ItemCatalog.java) | Seznam předmětů a jejich hodnoty. |
-| [ItemType.java](src/ItemType.java), [Rarity.java](src/Rarity.java) | Kategorie předmětu a váha při losování nabídky. |
+| [ItemType.java](src/ItemType.java), `Item.Rarity` v [Item.java](src/Item.java) | Kategorie předmětu a váha při losování nabídky. |
 | [Shop.java](src/Shop.java) | Společná zásoba, losování, nákup a prodej. |
 | [Damage.java](src/Damage.java) | Zbývající síla a délka jednoho časovaného účinku. |
 | [GameText.java](src/GameText.java) | České popisy odvozené přímo z hodnot předmětu nebo účinku. |
