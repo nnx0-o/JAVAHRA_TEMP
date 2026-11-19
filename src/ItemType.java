@@ -1,6 +1,6 @@
 public enum ItemType {
 
-    // dostupne hodnoty
+    // moznosti
 
     DAMAGE, HEAL, DEFEND, STAMINA, ARMOR, TRINKET
 }

@@ -1,23 +1,23 @@
 public enum Rarity {
 
-    // dostupne hodnoty
+    // moznosti
 
     COMMON(4), UNCOMMON(3), RARE(2);
 
-    // vaha pri random vyberu
+    // jak casto to padne
 
     private final int weight;
 
-    // vytvoreni hodnoty
+    // nastavime vahu
 
     Rarity(int weight) {
         this.weight = weight;
     }
 
-    // cteni vahy
+    // vaha
 
     public int getWeight() {
-        return weight; // vaha meni sanci na vyber ale ne pocet kusu
+        return weight; // vetsi vaha jen zvysi sanci kusy se losuji zvlast
     }
 
 }

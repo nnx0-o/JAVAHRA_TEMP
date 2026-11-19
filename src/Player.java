@@ -25,7 +25,7 @@ public class Player {
         this.name = name == null || name.isBlank() ? "Hráč" : name.trim();
     }
 
-    // cteni jmena zdroju a bojoveho stavu
+    // jak je na tom hrac
 
     public String getName() {
         return name;
@@ -55,9 +55,9 @@ public class Player {
         return health > 0;
     }
 
-    // kopie chrani seznam pred pridavanim zvenku efekty zustavaji sdilene
+    // seznam ven davame jako kopii efekty jsou porad ty same
     public List<Damage> getEffects() {
-        // kopie sdili instance efektu takze tick meni skutecny efekt
+        // tick sahne na skutecny efekt i pres tuhle kopii
         return List.copyOf(effects);
     }
 
@@ -65,10 +65,10 @@ public class Player {
         return List.copyOf(actions);
     }
 
-    // pristup k inventari a zmena jeho obsahu
+    // veci hrace
 
     public Inventory getEquipment() {
-        // vrati manager inventare vcetne armoru a talismanu
+        // je to cely inventar i s tim co ma na sobe
         return inventory;
     }
 
@@ -98,27 +98,27 @@ public class Player {
         health = Math.min(MAX_HEALTH, health + Math.max(0, amount));
     }
 
-    // bezna maximalni stamina
+    // stamina bez bonusu na dalsi tah
 
     public int getMaxStamina() {
         return GameRules.MAX_STAMINA;
     }
 
-    // reset stavu na zacatku souboje a tahu
+    // novy souboj nebo tah
 
     public void resetBattle() {
         health = MAX_HEALTH;
         stamina = getMaxStamina();
         shield = nextStamina = 0;
-        effects.clear(); // gold a itemy zustavaji ale bojove efekty ne
+        effects.clear(); // penize a veci si necha efekty jdou pryc
         actions.clear();
     }
 
     public void beginTurn() {
-        stamina = getMaxStamina() + nextStamina; // bonus se neprirezava na bezne maximum
+        stamina = getMaxStamina() + nextStamina; // bonus muze jit nad normalni maximum
         nextStamina = 0;
         actions.clear();
-        // stit smazeme az po startovnich efektech aby kryl i jed
+        // stit jeste nechame na uvodni efekty
     }
 
     // zmena stitu a staminy
@@ -139,24 +139,24 @@ public class Player {
         stamina += Math.max(0, amount);
     }
 
-    // ulozeni planu a prepocet rezervovane staminy
+    // vymenime plan a srovname staminu
 
     public boolean replacePlan(List<Item> plan, int previousCost, int nextCost) {
-        // stamina uz nema cenu stareho planu tak ji vratime a odecteme novou
-        // kdyz novy plan neprojde puvodni plan i stamina zustavaji
+        // nejdriv vratit starou cenu pak odecist novou
+        // kdyz to nevyjde nechame puvodni plan
         int budget = stamina + previousCost;
         if (nextCost < 0 || nextCost > budget) return false;
         stamina = budget - nextCost;
         actions.clear();
         actions.addAll(plan);
-        // pouzite itemy cteme z planu bez druhe kopie stavu
+        // co se pouzilo uz vime z planu
         return true;
     }
 
-    // pridavani a ocista samostatnych efektu s timerem
+    // pridani efektu a ocista
 
     public void addEffect(Damage effect) {
-        effects.add(effect); // jedy a heal maji vlastni timery podle poradi vzniku
+        effects.add(effect); // kazdy efekt si odpocitava svoje tahy
     }
 
     public void removeEffect(Damage effect) {
@@ -167,13 +167,13 @@ public class Player {
         int remaining = Math.max(0, budget);
         for (Damage effect : getEffects()) {
             if (effect.getType() != type || remaining == 0) continue;
-            remaining -= effect.reduceRemaining(remaining); // jeden rozpocet pro vsechny jedy dohromady
+            remaining -= effect.reduceRemaining(remaining); // tenhle limit je pro vsechny jedy dohromady
             if (effect.getAmount() == 0) effects.remove(effect);
         }
         return Math.max(0, budget) - remaining;
     }
 
-    // prichozi poskozeni armor stit a hp
+    // nejdriv armor pak stit pak hp
 
     public int receiveDamage(int amount, Damage.DamageType type) {
         int reduced = Math.max(0, amount);
@@ -181,7 +181,7 @@ public class Player {
         if (armor != null && armor.getDamageType() == type) {
             reduced = (int) Math.round(reduced * (100 - armor.getPower()) / 100.0);
         }
-        int blocked = Math.min(shield, reduced); // armor se pocita pred stitem
+        int blocked = Math.min(shield, reduced); // armor ubere jako prvni
         shield -= blocked;
         reduced -= blocked;
         int previous = health;

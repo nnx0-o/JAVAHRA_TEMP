@@ -7,28 +7,28 @@ import java.util.Random;
 
 public class Shop {
 
-    // sdilene zasoby obchodu
+    // oba nakupuji ze stejne nabidky
 
     private final Map<Item, Integer> stock = new LinkedHashMap<>();
 
-    // cteni nabidky
+    // co je na prodej
 
     public Map<Item, Integer> getStock() {
         return Collections.unmodifiableMap(stock);
     }
 
-    // random refresh nabidky a vahy vyberu
+    // namichame novou nabidku
 
     public void refresh(Random random) {
         stock.clear();
         List<Item> available = new ArrayList<>(ItemCatalog.getItems());
         for (int count = 0; count < GameRules.SHOP_SIZE && !available.isEmpty(); count++) {
-            // kazda jednotka vahy je los vetsi vaha znamena vetsi sanci
+            // vetsi vaha ma vic losu
             int totalWeight = 0;
             for (Item item : available) totalWeight += selectionWeight(item);
-            int ticket = random.nextInt(totalWeight); // vyber podle vah bez opakovani stejneho druhu
+            int ticket = random.nextInt(totalWeight); // kazdy typ jen jednou
             Item selected = available.get(0);
-            // odecitame vahy dokud nenajdeme item pro vylosovane cislo
+            // odecteme vahy a uvidime na koho to vyslo
             for (Item item : available) {
                 ticket -= selectionWeight(item);
                 if (ticket < 0) {
@@ -36,7 +36,7 @@ public class Shop {
                     break;
                 }
             }
-            // vybrany typ uz nelosujeme pocet kusu ma vlastni random
+            // tenhle typ uz mame ted jeste kolik kusu
             available.remove(selected);
             int quantity = selected.getMinStock() + random.nextInt(selected.getMaxStock() - selected.getMinStock() + 1);
             stock.put(selected, quantity);
@@ -44,18 +44,18 @@ public class Shop {
     }
 
     private int selectionWeight(Item item) {
-        // vsechny nabidky zustavaji nahodne ale levne zbrane jsou dostupne casteji
+        // porad random jen levne zbrane padaji casteji
         int multiplier = item.getItemType() == ItemType.DAMAGE && item.getPrice() <= 7 ? 3 : 1;
         return item.getRarity().getWeight() * multiplier;
     }
 
-    // nakup do inventare a prodej itemu
+    // nakup a prodej
 
     public boolean purchase(Player player, Item item) {
         if (item == null || stock.getOrDefault(item, 0) < 1) return false;
         int price = item.getPrice();
         if (player.getGold() < price) return false;
-        if (!player.addToInventory(item.copy())) return false; // nejdriv check mista bez ztraty goldu
+        if (!player.addToInventory(item.copy())) return false; // nejdriv misto pak penize
         stock.put(item, stock.get(item) - 1);
         player.changeGold(-price);
         return true;
@@ -63,7 +63,7 @@ public class Shop {
 
     public boolean sell(Player player, Item item) {
         if (item == null || !player.getEquipment().remove(item)) return false;
-        player.changeGold(item.getPrice() / 2); // jen prodej zaokrouhluje dolu
-        return true; // item se nevraci do spolecne nabidky
+        player.changeGold(item.getPrice() / 2); // pri prodeji zaokrouhlime dolu
+        return true; // do nabidky uz to nevracime
     }
 }

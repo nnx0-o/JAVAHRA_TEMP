@@ -3,17 +3,17 @@ import java.util.List;
 
 public final class ItemCatalog {
 
-    // trvala zbran kazdeho hrace
+    // pest ma kazdy od zacatku
 
     public static final Item FIST = new Item(ItemType.DAMAGE, "Pěst", 0,
             GameRules.BASIC_STAMINA_COST, GameRules.BASIC_DAMAGE, 1, Damage.DamageType.PHYSICAL,
             Rarity.COMMON, 1, 1, Item.Passive.NONE);
 
-    // sdileny seznam definic itemu
+    // vsechny typy itemu
 
     private static final List<Item> ITEMS = createItems();
 
-    // pristup ke katalogu
+    // katalog
 
     private ItemCatalog() {
     }
@@ -22,11 +22,11 @@ public final class ItemCatalog {
         return ITEMS;
     }
 
-    // sestaveni katalogu podle kategorii
+    // tady jsou vsechny itemy
 
     private static List<Item> createItems() {
         List<Item> items = new ArrayList<>();
-        // casovane zbrane maji silu za kazdy vlastni tah cile a pocet techto tahu
+        // u efektu na vic tahu zadavame davku a pocet tahu
         // fyzicke zbrane
         weapon(items, "Dýka", 3, 2, 4, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 2, 3);
         weapon(items, "Krátký meč", 4, 3, 6, 1, Damage.DamageType.PHYSICAL, Rarity.COMMON, 1, 3);
@@ -48,7 +48,7 @@ public final class ItemCatalog {
         weapon(items, "Zmijí tesák", 12, 6, 4, 4, Damage.DamageType.POISON, Rarity.RARE, 1, 1);
         weapon(items, "Trnový bič", 6, 3, 3, 3, Damage.DamageType.POISON, Rarity.COMMON, 1, 2);
 
-        // kratky heal hned pri akci delsi od dalsiho vlastniho tahu
+        // kratky heal hned delsi az od dalsiho vlastniho tahu
         heal(items, "Malý léčivý lektvar", 2, 2, 5, 1, Rarity.COMMON, 2, 4);
         heal(items, "Léčivý lektvar", 3, 3, 8, 1, Rarity.COMMON, 2, 3);
         heal(items, "Silný léčivý lektvar", 5, 4, 13, 1, Rarity.UNCOMMON, 1, 3);
@@ -97,12 +97,12 @@ public final class ItemCatalog {
         trinket(items, "Válečníkův amulet", 10, 2, Item.Passive.ATTACK_BONUS, Rarity.UNCOMMON);
         trinket(items, "Hadí kámen", 7, 3, Item.Passive.CLEANSE_POISON, Rarity.UNCOMMON);
         trinket(items, "Jantarová brož", 5, 2, Item.Passive.LOW_HEALTH_HEAL, Rarity.COMMON);
-        return List.copyOf(items); // kazdy nakup vytvori vlastni instanci itemu
+        return List.copyOf(items); // pri nakupu z toho vznikne vlastni kus
     }
 
-    // vytvareni jednotlivych kategorii itemu
+    // helpery pro jednotlive typy
 
-    // popisy sklada gametext z hodnot bez druhe kopie textu
+    // text k tomu slozi gametext tady staci hodnoty
     private static void weapon(List<Item> items, String name, int price, int cost, int power,
             int duration, Damage.DamageType type, Rarity rarity, int min, int max) {
         items.add(new Item(ItemType.DAMAGE, name, price, cost, power, duration, type,

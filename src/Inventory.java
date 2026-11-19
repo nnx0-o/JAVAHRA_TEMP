@@ -3,13 +3,13 @@ import java.util.List;
 
 public class Inventory {
 
-    // obsah kapacita a odkazy na vybavene itemy
+    // co hrac ma a co ma na sobe
 
     private final List<Item> items = new ArrayList<>(List.of(ItemCatalog.FIST));
     private Item equippedArmor;
     private Item equippedTrinket;
 
-    // cteni obsahu kapacity a vybaveni
+    // co je v inventari
 
     public List<Item> getItems() {
         return List.copyOf(items);
@@ -27,11 +27,11 @@ public class Inventory {
         return equippedTrinket;
     }
 
-    // pridani a bezpecne odebrani itemu
+    // pridat nebo vyndat item
 
     public boolean add(Item item) {
         if (item == null || items.contains(item) || items.size() >= getCapacity()) return false;
-        items.add(item); // kazdy fyzicky kus muze byt ulozen pouze jednou
+        items.add(item); // ten samy kus sem dvakrat nedame
         return true;
     }
 
@@ -42,11 +42,11 @@ public class Inventory {
         return true;
     }
 
-    // equip a sundani armoru nebo talismanu
+    // oblect nebo sundat
 
     public boolean equipArmor(Item item) {
         if (item != null && (item.getItemType() != ItemType.ARMOR || !items.contains(item))) return false;
-        equippedArmor = item; // null znamena sundani bez vyhozeni z inventare
+        equippedArmor = item; // null jen sunda item v inventari zustane
         return true;
     }
 

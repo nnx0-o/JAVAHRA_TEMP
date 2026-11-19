@@ -1,4 +1,4 @@
-// sklada ceske popisy z aktualnich hodnot itemu a efektu
+// popisy skladame z toho co item opravdu dela
 public final class GameText {
 
     // nazvy typu poskozeni
@@ -34,7 +34,7 @@ public final class GameText {
         };
     }
 
-    // stejny prehled vlastnosti pro kazdy item
+    // detail itemu
 
     public String description(Item item) {
         String timing = switch (item.getItemType()) {
@@ -57,14 +57,14 @@ public final class GameText {
                 : "\nPoužití: opakovaně, zůstává v inventáři.");
     }
 
-    // zbytek efektu bez simulace budoucich davek
+    // ukazeme co zbyva dalsi davky tu nepocitame
 
     public String effect(Damage effect) {
         return damageType(effect.getType()) + ": " + effect.getAmount()
                 + " zbývá / " + effect.getTimer() + " tahů";
     }
 
-    // sila jedne davky pocet tahu a celkova sila
+    // davka krat pocet tahu a k tomu soucet
 
     private String timed(int power, int turns) {
         return power + " × " + turns + " (" + Math.multiplyExact(power, turns) + ")";

@@ -1,18 +1,18 @@
 public class Damage {
 
-    // typ efektu a jeho cesky nazev
+    // jaky efekt to je
 
     public enum DamageType {
         PHYSICAL, POISON, HEAL
     }
 
-    // zbyvajici sila a pocet tahu
+    // kolik jeste zbyva a na jak dlouho
 
     private final DamageType type;
-    private int amount; // celkovy zbytek efektu a ne poskozeni za jeden tah
+    private int amount; // tohle je cely zbytek ne jedna davka
     private int timer;
 
-    // vytvoreni a kontrola efektu
+    // novy efekt
 
     public Damage(DamageType type, int amount, int timer) {
         if (type == null || amount < 0 || timer < 1) {
@@ -23,7 +23,7 @@ public class Damage {
         this.timer = timer;
     }
 
-    // cteni aktualniho stavu efektu
+    // co z efektu jeste zbyva
 
     public DamageType getType() {
         return type;
@@ -37,7 +37,7 @@ public class Damage {
         return timer;
     }
 
-    // vypocet a spotrebovani jedne davky
+    // ukousneme jednu davku
 
     public int takeTick() {
         int result = timer == 0 ? 0 : (int) Math.round((double) amount / timer);
@@ -48,11 +48,11 @@ public class Damage {
         return result;
     }
 
-    // odebrani casti zbyleho poskozeni pri ociste
+    // tady ubirame jed pri ociste
 
     public int reduceRemaining(int maximum) {
         int removed = Math.min(amount, Math.max(0, maximum));
-        amount -= removed; // ocista ma omezeny rozpocet a nemeni trvani zbytku
+        amount -= removed; // ubereme jen co ocista zvladne delka zustava
         return removed;
     }
 
