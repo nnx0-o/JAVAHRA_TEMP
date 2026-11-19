@@ -24,6 +24,7 @@ public class Inventory {
     }
 
     public boolean add(Item item) {
+        // item nema vlastni equals takze kontrolujeme stejny kus ne stejny typ
         if (item == null || items.contains(item) || items.size() >= getCapacity()) return false;
         items.add(item);
         return true;

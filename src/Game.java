@@ -95,6 +95,7 @@ public class Game {
     }
 
     public void openShop() {
+        // opakovane otevreni nesmi prelosovat shop uprostred nakupovani
         if (phase != Phase.ANNOUNCEMENT) return;
         shop.refresh(random);
         current = shopStarter;
@@ -160,6 +161,7 @@ public class Game {
             switch (trinket.getPassive()) {
                 case REGENERATION -> actor.heal(trinket.getPower());
                 case LOW_HEALTH_HEAL -> {
+                    // presne polovina jeste nestaci heal plati az pod ni
                     if (actor.getHealth() * 2 < Player.MAX_HEALTH) actor.heal(trinket.getPower());
                 }
                 case STAMINA_BONUS -> actor.addStamina(trinket.getPower());
@@ -204,6 +206,7 @@ public class Game {
         if (item == null) return "Vyber předmět.";
         Player actor = getCurrentPlayer();
         if (!actor.getInventory().contains(item)) return "Tento předmět nemáš v inventáři.";
+        // priprava blokuje i jed protoze je to porad utok na soupere
         if (item.getItemType() == ItemType.DAMAGE && isPreparation()) return "Přípravný tah: zatím nelze zasáhnout soupeře.";
         if (item.isEquipment()) return "Zbroj a talisman působí pasivně; mění se v obchodě.";
         // stejny lektvar nemuze byt v planu dvakrat zbran ano
@@ -267,6 +270,7 @@ public class Game {
                     target.receiveDamage(item.getPower() + attackBonus(actor), item.getDamageType());
                 } else {
                     Damage effect = new Damage(item.getDamageType(), item.getTotalPower(), item.getDuration());
+                    // kazde pouziti prida vlastni efekt neslucujeme je do jednoho timeru
                     target.addEffect(effect);
                 }
             }
@@ -274,6 +278,7 @@ public class Game {
                 if (item.getDuration() == 1) {
                     actor.heal(item.getPower());
                 } else {
+                    // uz probehl zacatek tahu takze prvni davka prijde az v dalsim vlastnim
                     actor.addEffect(new Damage(Damage.DamageType.HEAL, item.getTotalPower(), item.getDuration()));
                 }
             }
@@ -308,6 +313,7 @@ public class Game {
     public void nextBattle() {
         if (phase != Phase.RESULT) return;
         battle++;
+        // poradi se otaci po kazdem souboji bez ohledu na viteze
         shopStarter = 1 - shopStarter;
         current = shopStarter;
         for (Player player : players) player.resetBattle();

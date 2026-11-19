@@ -57,6 +57,7 @@ public class Shop {
 
     public boolean sell(Player player, Item item) {
         if (item == null || !player.getEquipment().remove(item)) return false;
+        // prodej bere cenu konkretniho kusu ne aktualni nabidku shopu
         player.changeGold(item.getPrice() / 2);
         return true; // do nabidky uz to nevracime
     }

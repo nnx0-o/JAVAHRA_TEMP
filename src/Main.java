@@ -184,6 +184,7 @@ public class Main {
         for (int row = 0; row < combatPlanButtons.length; row++) {
             final int index = row;
             combatPlanButtons[row] = button(COMBAT, 54, 14 + row, "", () -> {
+                // index radku je jen na strance hra potrebuje index v celem planu
                 game.removePlannedAction(combatPlanPage * PLAN_ROWS + index);
                 refresh();
             });
@@ -236,6 +237,7 @@ public class Main {
         });
         detailSellButton = button(DETAIL, 4, 34, "", () -> {
             message = game.sell(detailItem);
+            // po prodeji uz ten kus nevlastnime tak jeho detail zavreme
             if (!game.getCurrentPlayer().getInventory().contains(detailItem)) back();
             else refresh();
         });
@@ -283,6 +285,7 @@ public class Main {
     }
 
     private boolean isAvailable(int next) {
+        // navod jde otevrit i pred vytvorenim hry ostatni herni screeny ne
         if (next == HELP) return true;
         if (next == NAMES) return game == null;
         if (game == null) return false;
@@ -299,6 +302,7 @@ public class Main {
     private void open(int next) {
         if (next == layer || !isAvailable(next)) return;
 
+        // ve stacku jsou jen navraty do menu herni stav si nekopirujeme
         previousLayers.push(layer);
         layer = next;
         documentPages[next] = 0;
@@ -390,6 +394,7 @@ public class Main {
 
     private void moveElements(List<MiniTui.Element> elements, boolean visible) {
         for (MiniTui.Element element : elements) {
+            // sdilene panely patri vzdy na aktualni screen jinak by je minitui nevykreslilo
             element.z = layer;
             element.visible = visible;
         }
@@ -453,6 +458,7 @@ public class Main {
         combatEquipmentPanel.title = "Výbava — výdrž " + player.getStamina() + "/" + player.getMaxStamina();
 
         List<Item> items = new ArrayList<>();
+        // pasivni vybavu neplanujeme jeji efekt resi hra podle vybavenych slotu
         for (Item item : player.getInventory()) if (!item.isEquipment()) items.add(item);
         for (int row = 0; row < combatEquipmentButtons.length; row++) {
             MiniTui.Button button = combatEquipmentButtons[row];
@@ -531,6 +537,7 @@ public class Main {
         documentPages[layer] = Math.max(0, Math.min(documentPages[layer], pages - 1));
         for (int row = 0; row < TEXT_ROWS; row++) {
             int index = documentPages[layer] * TEXT_ROWS + row;
+            // prazdne radky taky prepiseme at nezustane text z minule stranky
             documentRows[row].setText(index < lines.size() ? lines.get(index) : "");
         }
         documentPreviousButton.visible = documentPages[layer] > 0;

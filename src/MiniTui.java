@@ -610,6 +610,7 @@ public class MiniTui {
                 ready.countDown();
             }
         }, "TUI-Input");
+        // input thread nesmi sam drzet aplikaci pri zivote po konci hlavniho loopu
         inputThread.setDaemon(true);
         Thread shutdownHook = new Thread(() -> {
             running = false;
@@ -649,6 +650,7 @@ public class MiniTui {
         } catch (Exception failure) {
             throw new IllegalStateException("MiniTui potřebuje funkční interaktivní terminál", failure);
         } finally {
+            // interrupt na uklid docasne odlozime na konci ho vratime
             boolean interrupted = Thread.interrupted();
             running = false;
             inputThread.interrupt();
@@ -813,6 +815,7 @@ public class MiniTui {
             if (dy != 0 && Integer.signum(relY) != dy) continue;
 
             double primaryDist = (dx != 0) ? Math.abs(relX) : Math.abs(relY);
+            // odskok do strany ma penalizaci at sipka preferuje stejny radek nebo sloupec
             double secondaryDist = (dx != 0) ? Math.abs(relY) * 6.0 : Math.abs(relX) * 2.5;
             double score = primaryDist + secondaryDist;
 
@@ -827,6 +830,7 @@ public class MiniTui {
 
     private void renderScreen() {
         ensureFocusOnCurrentLayer();
+        // jeden snapshot pro cely frame at se rozmery nezmeni uprostred kresleni
         TerminalGeometry geometry = terminal;
         int termWidth = geometry.width();
         int termHeight = geometry.height();
@@ -868,6 +872,7 @@ public class MiniTui {
         }
 
         String frame = sb.toString();
+        // zmena rozmeru vynuti novy tisk i kdyz samotny text zustal stejny
         if (geometry != lastRenderedGeometry || !frame.equals(lastFrame)) {
             System.out.print(frame);
             System.out.flush();
@@ -877,6 +882,7 @@ public class MiniTui {
     }
 
     private int renderBoundary(Element element, int width) {
+        // ramecek muze obklopovat dalsi prvky proto ho soused na stejnem radku neorezava
         if (element instanceof Box) return width;
         for (Element other : elements) {
             if (other.z == currentZ && other.visible && other.y == element.y
@@ -938,6 +944,7 @@ public class MiniTui {
                 continue;
             }
             if (Character.isISOControl(codePoint)) continue;
+            // siroky znak se musi vejit cely pulku do posledni bunky neposilame
             int columns = displayColumns(codePoint);
             if (x >= 0 && x + columns <= right && y >= 0 && y < bottom
                     && (columns > 0 || positioned)) {
@@ -963,6 +970,7 @@ public class MiniTui {
 
     private static int displayColumns(int codePoint) {
         int type = Character.getType(codePoint);
+        // kombinovana diakritika se pripise k predchozimu znaku vlastni bunku nema
         if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK
                 || type == Character.FORMAT) return 0;
         if (codePoint >= 0x1100 && (codePoint <= 0x115f || codePoint == 0x2329 || codePoint == 0x232a
@@ -1062,11 +1070,13 @@ public class MiniTui {
                     escape.setLength(0);
                 } else if (escape.length() >= 64) escape.setLength(0);
             }
+            // chvili pockame jestli je escape samostatna klavesa nebo zacatek sekvence
             deadline = now + TimeUnit.MILLISECONDS.toNanos(75);
         }
 
         void expire(long now) {
             if (!escape.isEmpty() && now >= deadline) {
+                // samotny escape potvrdime rozectenou sekvenci pri timeoutu zahodime
                 if (escape.length() == 1) keys.accept("ESC");
                 escape.setLength(0);
             }
