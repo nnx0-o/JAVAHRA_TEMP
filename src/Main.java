@@ -42,6 +42,7 @@ public class Main {
     private MiniTui.Button menuBackButton;
     private MiniTui.Box matchScorePanel, documentPanel;
     private final MiniTui.Label[][] matchPlayerStats = new MiniTui.Label[2][7];
+    private final MiniTui.Button[] playerDetailsButtons = new MiniTui.Button[2];
     private final MiniTui.Label[] documentRows = new MiniTui.Label[TEXT_ROWS];
     private MiniTui.Button documentPreviousButton, documentNextButton;
     private MiniTui.Label documentPageLabel;
@@ -127,10 +128,11 @@ public class Main {
                 matchElements.add(matchPlayerStats[player][row]);
             }
 
-            matchElements.add(button(SHOP, 106, top + 12, "Podrobnosti", () -> {
+            playerDetailsButtons[player] = button(SHOP, 106, top + 12, "Podrobnosti", () -> {
                 playerDetailsIndex = index;
                 open(PLAYER);
-            }));
+            });
+            matchElements.add(playerDetailsButtons[player]);
         }
     }
 
@@ -412,6 +414,7 @@ public class Main {
         for (int index = 0; index < 2; index++) {
             Player player = game.getPlayer(index);
             MiniTui.Label[] stats = matchPlayerStats[index];
+            playerDetailsButtons[index].colorCode = index == 0 ? ORANGE : MINT;
             stats[0].setText(fit(player.getName(), 28));
             stats[1].setText("Životy " + player.getHealth() + "/" + Player.MAX_HEALTH);
             stats[2].setText("Štít " + player.getShield() + " · Zlato " + player.getGold());
