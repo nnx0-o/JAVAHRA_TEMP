@@ -34,8 +34,7 @@ Main
      │   ├─ inventory → Inventory: vlastněné a vybavené předměty
      │   ├─ actions → seznam Item: aktuální plán
      │   └─ effects → seznam Damage: trvající účinky
-     ├─ shop → Shop: společná zásoba předmětů
-     └─ log → seznam textů: historie událostí
+     └─ shop → Shop: společná zásoba předmětů
 ```
 
 ### Který soubor otevřít
@@ -73,10 +72,10 @@ private void buildMenus() {
 Skutečný příklad z vytvoření navigace:
 
 ```java
-button(NAMES, 22, 36, "L  Historie", () -> open(HISTORY));
+button(NAMES, 2, 36, "F1  Návod", () -> open(HELP));
 ```
 
-Při vytváření menu vznikne tlačítko. `open(HISTORY)` se v tu chvíli **nevolá**. Lambda `() -> open(HISTORY)` je akce, kterou si tlačítko uloží do svého pole `action`.
+Při vytváření menu vznikne tlačítko. `open(HELP)` se v tu chvíli **nevolá**. Lambda `() -> open(HELP)` je akce, kterou si tlačítko uloží do svého pole `action`.
 
 Parametr má typ `Runnable`: objekt s metodou `run()`, která nemá parametry ani návratovou hodnotu. Až uživatel potvrdí tlačítko, `MiniTui.handleKey` zavolá jeho `action.run()`.
 
@@ -163,12 +162,11 @@ Pomocné metody `label`, `box`, `button` vytvoří prvek a přes `tui.add` ho za
 | `COMBAT` | 2 | Výbava a plán tahu. |
 | `DETAIL` | 3 | Detail vybraného předmětu. |
 | `HELP` | 4 | Návod. |
-| `HISTORY` | 5 | Historie událostí. |
-| `PLAYER` | 6 | Podrobnosti vybraného hráče. |
-| `RESULT` | 7 | Výsledek souboje nebo zápasu. |
-| `SIZE_WARNING` | 8 | Upozornění na rozměry terminálu. |
+| `PLAYER` | 5 | Podrobnosti vybraného hráče. |
+| `RESULT` | 6 | Výsledek souboje nebo zápasu. |
+| `SIZE_WARNING` | 7 | Upozornění na rozměry terminálu. |
 
-`isAvailable` kontroluje, zda lze menu otevřít. Historie například potřebuje existující hru. `showGame` překládá fázi `Game` na hlavní obrazovku: obchod, boj nebo výsledek.
+`isAvailable` kontroluje, zda lze menu otevřít. Podrobnosti hráče například potřebují existující hru. `showGame` překládá fázi `Game` na hlavní obrazovku: obchod, boj nebo výsledek.
 
 Fáze samotného zápasu postupují takto:
 
@@ -184,8 +182,8 @@ ANNOUNCEMENT → SHOP → COMBAT → RESULT → ANNOUNCEMENT → další obchod
 `previousLayers` je zásobník čísel menu. `push` přidá položku navrch, `pop` ji vezme a odstraní.
 
 ```text
-otevřeš: COMBAT → HELP → HISTORY
-Esc:     HISTORY → HELP → COMBAT
+otevřeš: COMBAT → HELP
+Esc:     HELP → COMBAT
 ```
 
 `open(next)` uloží starou vrstvu a otevře novou. `back()` vytáhne poslední uloženou vrstvu. `showRoot(next)` navíc zásobník vyčistí; používá se při přechodu mezi hráči a fázemi.
@@ -200,7 +198,7 @@ Předpony říkají, kam prvek patří: `names`, `shop`, `combat`, `detail`, `re
 
 `refresh()` nejprve upraví společné prvky, potom údaje zápasu a nakonec přes `switch` doplní otevřenou obrazovku. Název `updateShop` tedy znamená „obnov texty obchodu“, nikoli „vylosuj novou nabídku“.
 
-Textový panel sdílejí detail, návod, historie a podrobnosti hráče. `documentPages[layer]` pamatuje stránku pro každé z těchto menu. `wrapText` připraví řádky, `updateDocument` ukáže jejich výřez. Návod se do řádků převede jednou při startu.
+Textový panel sdílejí detail, návod a podrobnosti hráče. `documentPages[layer]` pamatuje stránku pro každé z těchto menu. `wrapText` připraví řádky, `updateDocument` ukáže jejich výřez. Návod se do řádků převede jednou při startu.
 
 Při malém okně se `MiniTui` přepne na varovnou vrstvu. `Main.layer` si ponechá skutečné menu, takže po zvětšení okna lze pokračovat na stejném místě. Pevný herní prostor je 140 × 38 znaků.
 
@@ -315,7 +313,7 @@ Spotřební předmět se odebere až po provedení své akce. Zbroj a talisman s
 
 ### Obrana v `Player.receiveDamage`
 
-Odpovídající zbroj nejprve procentuálně sníží zásah a výsledek zaokrouhlí. Potom štít pohltí dostupnou část. Až zbytek sníží životy. Metoda vrátí skutečnou ztrátu životů pro zprávu do historie.
+Odpovídající zbroj nejprve procentuálně sníží zásah a výsledek zaokrouhlí. Potom štít pohltí dostupnou část. Až zbytek sníží životy. Metoda vrátí skutečnou ztrátu životů.
 
 ### Konec souboje a zápasu
 
@@ -385,7 +383,7 @@ Tato tabulka porovnává konkrétní změny struktury a rozhraní z posledních 
 | --- | --- | --- |
 | Úvodní obrazovka jen s tlačítkem Začít. | Program otevře jména hráčů. | Jedna obrazovka a jeden přechod odpadly. |
 | Kopie panelů hráčů pro několik menu; aktualizace i skrytých obrazovek. | Jeden společný panel a aktualizace aktivní obrazovky. | Stejné údaje se nemusí udržovat na několika místech. |
-| Oddělené sady textových řádků pro detail, návod, historii a hráče. | Jeden textový panel; každé menu si pamatuje svou stránku. | Stejné stránkování slouží více obsahům. |
+| Oddělené sady textových řádků pro detail, návod a hráče. | Jeden textový panel; každé menu si pamatuje svou stránku. | Stejné stránkování slouží více obsahům. |
 | Pěst měla zvláštní příznak `basicAttack` v objektu akce. | Plán je seznam předmětů a pěst je trvalý `Item`. | Stejný výpočet ceny a provedení jako u dalších zbraní. |
 | Vybrat položku plánu a pak stisknout Odebrat. | Enter na položce ji rovnou odstraní. | Odpadl zvláštní stav vybrané akce. |
 | UI předem kontrolovalo část pravidel a vypínalo tlačítka. | Platnost pokusu kontroluje hra a vrací zprávu. | Pravidlo je na jednom místě. |

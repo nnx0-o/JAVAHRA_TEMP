@@ -1,6 +1,5 @@
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Random;
@@ -10,7 +9,7 @@ public class Main {
     // pravidla jsou v game a player tady jen ui
 
     private static final int NAMES = 0, SHOP = 1, COMBAT = 2, DETAIL = 3;
-    private static final int HELP = 4, HISTORY = 5, PLAYER = 6, RESULT = 7, SIZE_WARNING = 8;
+    private static final int HELP = 4, PLAYER = 5, RESULT = 6, SIZE_WARNING = 7;
     private static final int WIDTH = 140, HEIGHT = 38, TEXT_ROWS = 18, PLAN_ROWS = 16;
     private static final String WHITE = MiniTui.Color.WHITE, MUTED = MiniTui.Color.BRIGHT_BLACK;
     private static final String ORANGE = MiniTui.Color.foreground(255, 170, 80);
@@ -42,7 +41,7 @@ public class Main {
     private final List<MiniTui.Element> matchElements = new ArrayList<>();
     private final List<MiniTui.Element> documentElements = new ArrayList<>();
     private MiniTui.Label menuHeading, matchMessage, sizeWarningLabel;
-    private MiniTui.Button menuBackButton, menuHistoryButton;
+    private MiniTui.Button menuBackButton;
     private MiniTui.Box matchScorePanel, documentPanel;
     private final MiniTui.Label[][] matchPlayerStats = new MiniTui.Label[2][7];
     private final MiniTui.Label[] documentRows = new MiniTui.Label[TEXT_ROWS];
@@ -93,12 +92,10 @@ public class Main {
 
         menuHeading = label(NAMES, 3, 1, "DUEL 1V1", WHITE);
         menuBackButton = button(NAMES, 60, 36, "Esc  Zpět", this::back);
-        menuHistoryButton = button(NAMES, 22, 36, "L  Historie", () -> open(HISTORY));
 
         navigationElements.addAll(List.of(
                 menuHeading,
                 menuBackButton,
-                menuHistoryButton,
                 button(NAMES, 2, 36, "F1  Návod", () -> open(HELP)),
                 button(NAMES, 107, 36, "R  Obnovit", this::refresh)
         ));
@@ -264,13 +261,13 @@ public class Main {
                 "Odpovídající zbroj sníží každý zásah včetně dávek jedem, výsledek se zaokrouhlí. Potom se použije štít a nakonec životy.",
                 "Štíty se sčítají. Starý štít kryje i úvodní účinky příštího vlastního tahu, potom zanikne.",
                 "Tři vítězství ukončí zápas. Nevyužité předměty a zlato zůstávají do dalšího souboje.",
-                "F1/H otevře návod, L historii. Esc vrátí předchozí menu. R obnoví obsah. Ctrl+C ukončí hru."));
+                "F1/H otevře návod. Esc vrátí předchozí menu. R obnoví obsah. Ctrl+C ukončí hru."));
     }
 
     private void registerKeys() {
         tui.onKey("F1", () -> open(HELP));
         tui.onKey("h", () -> open(HELP));
-        tui.onKey("l", () -> open(HISTORY));
+        // tui.onKey("l", () -> open(HISTORY));
         tui.onKey("ESC", this::back);
         tui.onKey("r", this::refresh);
 
@@ -294,7 +291,7 @@ public class Main {
             case COMBAT -> game.getPhase() == Game.Phase.COMBAT;
             case RESULT -> game.getPhase() == Game.Phase.RESULT || game.getPhase() == Game.Phase.FINISHED;
             case DETAIL -> detailItem != null;
-            case HISTORY, PLAYER -> true;
+            case PLAYER -> true;
             default -> false;
         };
     }
@@ -363,13 +360,12 @@ public class Main {
 
     private void refresh() {
 
-        tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1/H: návod  L: historie  R: obnovit  Esc: zpět");
+        tui.setStatus("Šipky: výběr  Enter: potvrdit  I: popis  F1/H: návod  R: obnovit  Esc: zpět");
         tui.setTheme(game == null ? WHITE : game.getCurrentIndex() == 0 ? ORANGE : MINT);
         moveElements(navigationElements, true);
         menuBackButton.visible = !previousLayers.isEmpty();
-        menuHistoryButton.visible = game != null;
         moveElements(matchElements, game != null);
-        moveElements(documentElements, layer == DETAIL || layer == HELP || layer == HISTORY || layer == PLAYER);
+        moveElements(documentElements, layer == DETAIL || layer == HELP || layer == PLAYER);
 
         menuHeading.setText("DUEL 1V1");
         if (game != null) updateMatch();
@@ -379,11 +375,6 @@ public class Main {
             case COMBAT -> updateCombat();
             case DETAIL -> updateDetail();
             case HELP -> updateDocument("Návod", helpLines);
-            case HISTORY -> {
-                List<String> history = new ArrayList<>(game.getLog());
-                Collections.reverse(history);
-                updateDocument("Historie — nejnovější nahoře", wrapText(history));
-            }
             case PLAYER -> updatePlayerDetails();
             case RESULT -> {
                 resultLabel.setText("Vítězí " + game.getPlayer(game.getWinner()).getName()

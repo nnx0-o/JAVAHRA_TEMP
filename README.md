@@ -15,7 +15,7 @@ src/oracleJdk-27/bin/java -cp bin Main
 
 Pokud máš JDK v systémové cestě, stačí `javac` a `java`. Adresář `src/oracleJdk-27` obsahuje přibalené JDK, nikoli zdrojový kód hry. `bin` je vygenerovaný výstup kompilace.
 
-Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F1/H otevře návod, L historii, I popis výbavy, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
+Rozhraní potřebuje **140 × 38 znaků**. Šipky vybírají, Enter potvrzuje, F1/H otevře návod, I popis výbavy, R obnoví obsah a Esc vrací předchozí menu. Ctrl+C ukončí hru.
 
 ## Který soubor má jaký důvod
 
